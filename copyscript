@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# copy files to demo5
+cp audioFile.c demo5
+cp audio.c demo5
+cp audio.h demo5
+cp control.c demo5
+cp control.h demo5
+cp main.c demo5
+cp makefile demo5
+
+# copy files to raspi
+scp -r demo5 pi@192.168.2.2:/home/pi/alsatest
