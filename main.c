@@ -10,12 +10,12 @@
 #include <pthread.h>
 #include <ctype.h>
 // sample-proj headers
+#include "sampler.h"
 #include "audio.h"
 // #include "device.h"
 #include "control.h"
-// #include "parse.h"
+#include "parse.h"
 // #include "config.h"
-
 
 // debug messages with info on usage
 void output_commandline() {
@@ -34,6 +34,7 @@ void output_config() {
 // entry point function
 int main(int argc, char* argv[]) {
   // parse commandline arguments
+  parse_commandline(argc, argv);
   output_commandline();
 
   // parse config file - NOT YET ESTABLISHED

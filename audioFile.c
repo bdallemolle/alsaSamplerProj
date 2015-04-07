@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 // alsa-proj headers
+#include "sampler.h"
 #include "audio.h"
 
 /* -------------------------------------------------------------------------- */
@@ -126,5 +127,5 @@ int setDefaultAudioFile(char* filename, AudioFile* a) {
   a->audioAddr = a->addr + WAV_OFFSET;                           // start of audio data (...hardcoded kinda)
   strcpy(a->filename, filename);                            // copy filename
 
-  return;
+  return 1;
 }

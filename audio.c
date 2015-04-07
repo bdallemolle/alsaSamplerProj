@@ -10,20 +10,21 @@
 // alsa-libs
 #include <alsa/asoundlib.h>
 // sampler proj headers
+#include "sampler.h"
 #include "audio.h"
 #include "audioFile.h"
 
 /* AUDIO DEVICE VARIABLES */
-char output_dev[MAX_NAME];                          // name of output device
-snd_pcm_t* output_handle = NULL;                    // output device handle (ALSA)
-char input_dev[MAX_NAME];                           // name of input device
-snd_pcm_t* input_handle = NULL;                     // input device handle (ALSA)
+char output_dev[MAX_NAME];                    // name of output device
+snd_pcm_t* output_handle = NULL;              // output device handle (ALSA)
+char input_dev[MAX_NAME];                     // name of input device
+snd_pcm_t* input_handle = NULL;               // input device handle (ALSA)
 
 /* CONCURRANT CONTROL VARIABLES */
-pthread_t PLAYBACK_THREAD = -1;                     // playback thread id 
-pthread_mutex_t mix_lock;                           // mix table lock
-pthread_mutex_t exit_lock;                          // exit (playback thread) toggle lock
-unsigned int EXIT_PLAYER;                           // playback loop exit toggle
+pthread_t PLAYBACK_THREAD = -1;               // playback thread id 
+pthread_mutex_t mix_lock;                     // mix table lock
+pthread_mutex_t exit_lock;                    // exit (playback thread) toggle lock
+unsigned int EXIT_PLAYER;                     // playback loop exit toggle
 
 /* -------------------------------------------------------------------------- */
 
@@ -138,6 +139,9 @@ void clearAudioTableEnt(int i) {
 
 // clears/zero-outs an entry in the mix table
 void clearAudioTable() {
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, " - Clearing the audio table.\n");
+
   int i;
   for (i = 0; i < MAX_FILES; i++)
     clearAudioTableEnt(i);
@@ -202,8 +206,8 @@ int mix(SAMPLE_TYPE buf[]) {
     }
      
     // copy remainder 0
-    for (k; k < FRAME_SIZE; k++)
-      buf[k] += 0;
+    // for (k; k < FRAME_SIZE; k++)
+    //   buf[k] += 0;
 
     if (lastIdx) {
       // this is very temporary...
@@ -232,21 +236,24 @@ int initOutputDevice() {
     return -1;
   }
   
-  fprintf(stderr, "\n*** SOUND DEVICE '%s' OPEN ***\n", output_dev);
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "\n*** SOUND DEVICE '%s' OPEN ***\n", output_dev);
 
   if ((err = snd_pcm_set_params(output_handle,  // playback handle
              SND_PCM_FORMAT_S16_LE,             // signed 16-bit little endian pcm
              SND_PCM_ACCESS_RW_INTERLEAVED,     // read/write interleaved stream
              NUM_CHAN,                          // number of channels
              SAMPLE_RATE,                       // sampler rate
-             1,                                 // soft resample(?)
-             500))                              // latency (500 microseconds)
+             1,                                 // soft resample (?)
+             1000))                              // latency (500 microseconds)
              < 0) {
-    fprintf(stderr, "playback error(%s)\n", snd_strerror(err));
+    fprintf(stderr, "*** ERROR: set parameters error(%s)\n", snd_strerror(err));
     return -1;
   }
   
-  fprintf(stderr, "parameters set for output device\n");
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "parameters set for output device\n");
+
   return 1;
 }
 
@@ -262,13 +269,15 @@ int playbackLoop() {
   for (i = 0; i < FRAME_SIZE; i++) buf[i] = 0; 
   
   // debugging
-  fprintf(stderr, "\n*** STARTING AUDIO PLAYBACK LOOP! *** \n\n");
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, "\n*** STARTING AUDIO PLAYBACK LOOP! *** \n\n");
   
   // loop until "killed" by main thread
   i = 0;
   int isDone = 0;
   while (!isDone) {
-    mix(buf); // mix buffer
+    // mix buffer
+    mix(buf);            
 
     // write frames to audio device
     frames = snd_pcm_writei(output_handle, buf, FRAME_SAMP);
@@ -276,8 +285,7 @@ int playbackLoop() {
       frames = snd_pcm_recover(output_handle, frames, 0);
     }
     if (frames < 0) {
-      fprintf(stderr, "snd_pcm_write failed, done...\n");
-      // should set this exit loop?
+      fprintf(stderr, "*** ERROR: snd_pcm_write failed, exit playback loop... ***\n");
       return -1;
     }
     
@@ -288,30 +296,38 @@ int playbackLoop() {
     // check exit conditions (is this bad practice to do so much locking?)
     pthread_mutex_lock(&exit_lock);
     if (EXIT_PLAYER) {
-      fprintf(stderr, "*** PLAYBACK LOOP STOPPED ***\n");
+      if (AUDIO_PLAY_DEBUG)
+        fprintf(stderr, "*** PLAYBACK LOOP STOPPED ***\n");
       isDone = 1;
     }
     pthread_mutex_unlock(&exit_lock);
   }
 
-  return;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */
 
 // wrapper for audio playback loop
 void* playbackLaunch() {
-  playbackLoop();
-  fprintf(stderr, "*** KILLING PLAYBACK THREAD ***\n");
+  if (playbackLoop() < 0) {
+    fprintf(stderr, "*** ERROR: PLAYBACK LOOP FAILURE! ***\n" );
+    // do behaviors based on error codes
+  }
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - Playback thread exiting...\n");
   pthread_exit(NULL);
 }
 
 /******************************************************************************
- *                             PUBLIC FUNCTIONS                               *
+ *                            INTERFACED FUNCTIONS                            *
  ******************************************************************************/
 
 // initializes audio player data structures and sound devices for playback
 int initAudio(char* output_dev_name) {
+  if (AUDIO_PLAY_DEBUG) 
+    fprintf(stderr, " - Initializing audio!\n");
+
   // set global variables
   strcpy(output_dev, output_dev_name);
 
@@ -346,10 +362,12 @@ int initAudio(char* output_dev_name) {
   return 1;
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 int startAudio() {
+  if (AUDIO_PLAY_DEBUG) 
+    fprintf(stderr, " - Launching playback loop thread\n");
+
   // launch audio player thread
   if (pthread_create(&PLAYBACK_THREAD, NULL, playbackLaunch, NULL) < 0) {
     fprintf(stderr, "*** ERROR: launching playback thread failed! ***\n");
@@ -377,11 +395,13 @@ int setAudioTable(char* filenames[], int nFiles) {
       printAudioFileInfo(i);
   }
   
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, " - %d files opened\n", i);
+
   // set extra audioTable file entries to blank
   if (i < MAX_FILES) {
     if (AUDIO_INIT_DEBUG) {
-      fprintf(stderr, "Only %d files opened\n", i);
-      fprintf(stderr, "Zeroing out remaining entries\n");
+      fprintf(stderr, " - Zeroing out remaining entries\n");
     }
     while (i < MAX_FILES) {
       clearAudioTableEnt(i);
@@ -389,22 +409,25 @@ int setAudioTable(char* filenames[], int nFiles) {
     }
   }  
 
-  return 1;       // success
+  return 1; 
 }
 
 /* -------------------------------------------------------------------------- */
 
+// needs a configuration arguement
 int setSampleTable() {
-
+  fprintf(stderr, "*** SET SAMPLE TABLE! ***\n");
   return 1;
 }                     
 
 /* -------------------------------------------------------------------------- */
 
 int exitAudio() {
-  fprintf(stderr, "*** CLOSING AUDIO DEVICE ***\n");
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - CLOSING AUDIO DEVICE\n");
+
   if (snd_pcm_close(output_handle) < 0) {
-    fprintf(stderr, "BLEHHHHHHHH");
+    fprintf(stderr, "*** ERROR: CLOSING AUDIO DEVICE FAILED! ***\n");
   }
   return 1;
 }
@@ -412,6 +435,9 @@ int exitAudio() {
 /* -------------------------------------------------------------------------- */
 
 int killAudio() {
+  if (AUDIO_PLAY_DEBUG) 
+    fprintf(stderr, " - KILL AUDIO SIGNALLED\n");
+
   // set endloop toggle...
   pthread_mutex_lock(&exit_lock);
   EXIT_PLAYER = 1;
@@ -432,35 +458,40 @@ int killAudio() {
 /* -------------------------------------------------------------------------- */
 
 int sampleStart(int sampleID) {
-
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - Sample %d told to START\n");
    return 1;
 }
 
 /* -------------------------------------------------------------------------- */
 
 int sampleStop(int sampleID) {
-
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - Sample %d told to STOP\n");
    return 1;
 }
 
 /* -------------------------------------------------------------------------- */
 
 int sampleRestart(int sampleID) {
-
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - Sample %d told to RESTART\n");
    return 1;
 }
 
 /* -------------------------------------------------------------------------- */
 
 int sampleOverlay(int sampleID) {
-
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - Sample %d told to play OVERLAID!\n");
    return 1;
 }
 
 /* -------------------------------------------------------------------------- */
 
 int sampleStopALL() {
-
+  if (AUDIO_PLAY_DEBUG) 
+    fprintf(stderr, " - ALL samples told to STOP");
    return 1;
 }
 

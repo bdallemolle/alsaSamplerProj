@@ -6,6 +6,9 @@ cp audio.c demo5
 cp audio.h demo5
 cp control.c demo5
 cp control.h demo5
+cp parse.c demo5
+cp parse.h demo5
+cp sampler.h demo5
 cp main.c demo5
 cp makefile demo5
 

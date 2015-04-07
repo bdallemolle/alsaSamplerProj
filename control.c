@@ -10,32 +10,34 @@
 #include <pthread.h>
 #include <ctype.h>
 // sample-proj headers
+#include "sampler.h"
 #include "audio.h"
 // #include "gpio.h"
 
 char* testfile = "gtrsample.wav";
 
 int run() {
+  char buf[MAX_NAME];
   int i = 0;
 
-	fprintf(stderr, "*** RUN CALLED! DO STUFF ***\n");
+	fprintf(stderr, "*** RUN CALLED! DO \"CONTROL\" STUFF ***\n");
+
+  // for each setting...
 
 	// open audio files
   setAudioTable(&testfile, 1);
 
+  // a bad hack for avoiding initial overruns
+  sleep(2);
+
   // play audio
   startAudio();
 
-  // try playing a sample
+  // play the testing sound
   setPlaybackSound(0);
 
-  // sleep...lol
-  while (i < 3) {
-    sleep(2);
-    fprintf(stderr, ".");
-    i++;
-  }
-  fprintf(stderr, "\n");
+  // temporary block until input fron standard in
+  fgets(buf, MAX_NAME, stdin);
 
   // cleanup
   killAudio();                   // kills playback loop/thread
