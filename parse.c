@@ -11,8 +11,16 @@
 /* -------------------------------------------------------------------------- */
 
 void initDebug() {
+	// init audio debugging flags
 	AUDIO_INIT_DEBUG = 0;
 	AUDIO_PLAY_DEBUG = 0;
+
+	// init _____ debugging flags
+
+	// init _____ debugging flags
+
+	// init _____ debugging flags
+
 	return;
 }
 

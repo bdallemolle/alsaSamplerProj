@@ -5,14 +5,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
-#include <signal.h>
-#include <poll.h>
-#include <pthread.h>
 #include <ctype.h>
 // sample-proj headers
 #include "sampler.h"
 #include "audio.h"
-// #include "device.h"
+#include "device.h"
 #include "control.h"
 #include "parse.h"
 // #include "config.h"
@@ -40,9 +37,10 @@ int main(int argc, char* argv[]) {
   // parse config file - NOT YET ESTABLISHED
 
   // initialize audio
-  initAudio(OUTPUT_DEV);
+  initAudio(OUTPUT_DEV);        // init the default output device
 
   // initialize devices
+  initDevice(COMMANDLINE);      // init the commandline as a device
 
   // initialize behaviors
 

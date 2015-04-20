@@ -3,6 +3,8 @@
 #define MAX_MIX   	    16			                    // Max sounds that can be mixed at ones (*** FOR NOW ***)
 #define MAX_NAME  	    80                          // Max filename size
 #define MAX_SAMPLE      8                           // Max number of samples you can use
+#define PLAYING         1                           //
+#define STOPPED         0                           // 
 
 /* EVENTUALLY OBSOLETE MACROS - USER PARAMS AND ALSA MIXING SHOULD TAKE CARE OF THIS */
 #define FRAME_SAMP      256                         // Number of multi-channel samples
@@ -13,7 +15,6 @@
 #define BIT_DEPTH       16                          // Playback bit depth
 #define POS_CLIP        32676                       // Max value of 16-bit PCM  
 #define NEG_CLIP        -32768                      // Min value of 16-bit PCM 
-#define OUTPUT_DEV 	    "sysdefault:CARD=CODEC" 		// playback device name
 typedef short SAMPLE_TYPE;                          // size of 16-bit PCM audio
 typedef short* SAMPLE_PTR;                          // pointer to 16-bit PCM audio data
 
@@ -81,7 +82,7 @@ int sampleOverlay(int sampleID);          // plays a sample over itself (mix tab
 int sampleStopALL();                      // stops all sample playback
 
 /*** ARCHAIC WAY TO SET FILES FOR PLAYBACK... ***/
-int setPlaybackSound(int idx);            //
+int setPlaybackSound(int idx);            // sets an audio file for playback in mixer directly
 
 // file open functions
 void printAudioFileInfo(int tableIdx);

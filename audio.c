@@ -101,7 +101,8 @@ int setMixTableFile(int audioFileIdx) {
   mixTable[openMixIdx].file = &audioTable[audioFileIdx];
   mixTable[openMixIdx].nFrames = audioTable[audioFileIdx].audioSizeSamples / FRAME_SIZE;
   mixTable[openMixIdx].lastIdx = mixTable[openMixIdx].nFrames; 
-  mixTable[openMixIdx].lastSubSampleIdx = (audioTable[audioFileIdx].audioSizeSamples - (mixTable[openMixIdx].nFrames * FRAME_SIZE));
+  mixTable[openMixIdx].lastSubSampleIdx = (audioTable[audioFileIdx].audioSizeSamples 
+                                          - (mixTable[openMixIdx].nFrames * FRAME_SIZE));
   
   // print debugging
   fprintf(stderr, "%d last frame sub sample idx\n", mixTable[openMixIdx].lastSubSampleIdx);
@@ -113,7 +114,7 @@ int setMixTableFile(int audioFileIdx) {
   // release mix table lock
   pthread_mutex_unlock(&mix_lock);
 
-  return 1;	// success
+  return openMixIdx;	// success
 }
  
 /* -------------------------------------------------------------------------- */
@@ -204,10 +205,6 @@ int mix(SAMPLE_TYPE buf[]) {
       }
       else buf[k] += mixTable[i].addr[j];
     }
-     
-    // copy remainder 0
-    // for (k; k < FRAME_SIZE; k++)
-    //   buf[k] += 0;
 
     if (lastIdx) {
       // this is very temporary...
@@ -239,13 +236,14 @@ int initOutputDevice() {
   if (AUDIO_INIT_DEBUG)
     fprintf(stderr, "\n*** SOUND DEVICE '%s' OPEN ***\n", output_dev);
 
+  // set ALSA parameters
   if ((err = snd_pcm_set_params(output_handle,  // playback handle
              SND_PCM_FORMAT_S16_LE,             // signed 16-bit little endian pcm
              SND_PCM_ACCESS_RW_INTERLEAVED,     // read/write interleaved stream
              NUM_CHAN,                          // number of channels
              SAMPLE_RATE,                       // sampler rate
              1,                                 // soft resample (?)
-             1000))                              // latency (500 microseconds)
+             500))                              // latency (500 microseconds)
              < 0) {
     fprintf(stderr, "*** ERROR: set parameters error(%s)\n", snd_strerror(err));
     return -1;
@@ -263,19 +261,17 @@ int initOutputDevice() {
 int playbackLoop() {
   SAMPLE_TYPE buf[FRAME_SIZE];
   snd_pcm_sframes_t frames;
-  int i, j;
 
-  // zero buffer --- memset()
-  for (i = 0; i < FRAME_SIZE; i++) buf[i] = 0; 
-  
   // debugging
   if (AUDIO_PLAY_DEBUG)
     fprintf(stderr, "\n*** STARTING AUDIO PLAYBACK LOOP! *** \n\n");
   
   // loop until "killed" by main thread
-  i = 0;
   int isDone = 0;
   while (!isDone) {
+    // zero buffer --- memset()
+    memset(buf, 0, FRAME_SIZE);
+
     // mix buffer
     mix(buf);            
 
@@ -288,10 +284,6 @@ int playbackLoop() {
       fprintf(stderr, "*** ERROR: snd_pcm_write failed, exit playback loop... ***\n");
       return -1;
     }
-    
-    // clear buffer for next round --- MEMSET()
-    for (j = 0; j < FRAME_SIZE; j++) buf[j] = 0; 
-    i++;
 
     // check exit conditions (is this bad practice to do so much locking?)
     pthread_mutex_lock(&exit_lock);
@@ -460,7 +452,7 @@ int killAudio() {
 int sampleStart(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
     fprintf(stderr, " - Sample %d told to START\n");
-   return 1;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -468,7 +460,7 @@ int sampleStart(int sampleID) {
 int sampleStop(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
     fprintf(stderr, " - Sample %d told to STOP\n");
-   return 1;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -476,7 +468,7 @@ int sampleStop(int sampleID) {
 int sampleRestart(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
     fprintf(stderr, " - Sample %d told to RESTART\n");
-   return 1;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -484,7 +476,7 @@ int sampleRestart(int sampleID) {
 int sampleOverlay(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
     fprintf(stderr, " - Sample %d told to play OVERLAID!\n");
-   return 1;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -492,7 +484,7 @@ int sampleOverlay(int sampleID) {
 int sampleStopALL() {
   if (AUDIO_PLAY_DEBUG) 
     fprintf(stderr, " - ALL samples told to STOP");
-   return 1;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */

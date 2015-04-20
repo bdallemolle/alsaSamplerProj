@@ -14,6 +14,7 @@
 #include "audio.h"
 // #include "gpio.h"
 
+// DEVELOPMENTAL STUFF
 char* testfile = "gtrsample.wav";
 
 int run() {
@@ -27,8 +28,13 @@ int run() {
 	// open audio files
   setAudioTable(&testfile, 1);
 
+  // set sample mapping
+  // setSampleTable()
+
   // a bad hack for avoiding initial overruns
-  sleep(2);
+  fprintf(stderr, "Waiting...\n");
+  sleep(1);
+  fprintf(stderr, "DONE!\n");
 
   // play audio
   startAudio();
