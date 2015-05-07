@@ -8,13 +8,14 @@
 #include <sys/stat.h>
 // alsa-proj headers
 #include "sampler.h"
+#include "config.h"
 #include "audio.h"
 
 /* -------------------------------------------------------------------------- */
 
 // helper function for debugging
 void printAudioFileInfo(int tableIdx) {
-  if (MAX_FILES <= tableIdx) {
+  if (MAX_AUDIO_FILES <= tableIdx) {
     fprintf(stderr, "*** ERROR: audio file table index error (print) ***\n");
     return;
   }
@@ -31,50 +32,103 @@ void printAudioFileInfo(int tableIdx) {
 /* -------------------------------------------------------------------------- */
 
 // function to read WAV/RIFF file header
-void readWAV(void* fileAddr, int* audioDataSize) {
-  char buf[WAV_OFFSET];		// buffer for header  
+int readWAV(AudioFile* a) {
+  char buf[WAV_OFFSET];		// buffer for header
+  int audioDataSize;  
 
-  fprintf(stderr, "\n*** READING WAV FILE HEADER ***\n");
+  // debugging
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "\n*** READING WAV FILE HEADER ***\n");
+
   // copy header
-  memcpy(buf, fileAddr, WAV_OFFSET); 
-  fprintf(stderr, "COPY SUCCESSFUL!\n");
+  memcpy(buf, a->addr, WAV_OFFSET); 
   
   // output wav info
-  fprintf(stderr, "1-4: %4.4s\n", buf);                   // marks file as RIFF
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "1-4: %4.4s\n", buf);                  
 
-  // this needs to equal RIFF
+  // check for RIFF file
+  if (strncmp(buf, "RIFF", 4) == 0) {
+    if (AUDIO_INIT_DEBUG)
+      fprintf(stderr, " - Valid RIFF file\n");
+  }
+  else {
+    fprintf(stderr, "*** ERROR: NOT A RIFF FILE ***\n");
+    return -1;
+  }
+
+  // output file size (minus 8 bytes?)
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "5-8: %d\n", *((int*)(buf+4)));       
+
+  // output file header (should be WAVE)
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "9-12: %4.4s\n", (buf+8));
+
+  // check for WAVE file                
+  if (strncmp(buf+8, "WAVE", 4) == 0) {
+    if (AUDIO_INIT_DEBUG)
+      fprintf(stderr, " - Valid WAVE file\n");
+  }
+  else {
+    fprintf(stderr, "*** ERROR: NOT A WAVE FILE ***\n");
+    return -1;
+  }
+
+  // "fmt"
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "13-16: %4.4s\n", (buf+12));             
+
+  // length of format data as listed above (bitdepth)
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "17-20: %d\n", *((int*)(buf+16)));        
+
+  // check that it is 16 (later, or 24)
+  if (*((int*)(buf+16)) == BIT_DEPTH) {
+    if (AUDIO_INIT_DEBUG)
+      fprintf(stderr, " - Valid bit depth (16)\n");
+    a->bitDepth = *((int*)(buf+16));
+  }
+  else {
+    fprintf(stderr, "*** ERROR: INVALID BIT DEPTH ***\n");
+    return -1;
+  }
+
+  // type of format 
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "21-22: %d\n", *((short*)(buf+20)));      
+
+  // should be 1 (for PCM)?
+
+  // number of channels
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "22-24: %d\n", *((short*)(buf+22))); 
+
+  // check that it is 2! 
+  if (*((short*)(buf+22)) == NUM_CHAN) {
+    if (AUDIO_INIT_DEBUG)
+      fprintf(stderr, " - Valid number of channels (2)\n");
+    a->nChannels = *((short*)(buf+22));
+  }
+  else {
+    fprintf(stderr, "*** ERROR: INVALID NUM CHANNELS ***\n");
+    return -1;
+  }           
   
-  fprintf(stderr, "5-8: %d\n", *((int*)(buf+4)));         // size of the overall file (minus 8 bytes?)
+  // size of audio data (minus 44 apparently too...)
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, "(AUDIO DATA SIZE?) 41-44: %d\n", *((int*)(buf+40)));
 
-  // not sure what to expect there
-  
-  fprintf(stderr, "9-12: %4.4s\n", (buf+8));              // file type header, always WAVE
+  // store audio file length
+  audioDataSize = *((int*)(buf+40)) - WAV_OFFSET;
+  a->audioSizeSamples = audioDataSize / (sizeof(SAMPLE_TYPE));  
 
-  // this needs to equal WAVE
-  
-  fprintf(stderr, "13-16: %4.4s\n", (buf+12));            // "fmt"
-
-  // should simply be "fmt" + null
-  
-  fprintf(stderr, "17-20: %d\n", *((int*)(buf+16)));       // length of format data as listed above (bitdepth)
-
-  // bitdepth needs to == 16 for our application
-
-  fprintf(stderr, "21-22: %d\n", *((short*)(buf+20)));      // type of format 
-
-  // should be 1 (for PCM)
-  
-  fprintf(stderr, "22-24:  %d\n", *((short*)(buf+22)));     // number of channels        
-  
-  fprintf(stderr, "(AUDIO DATA SIZE?) 41-44: %d\n", *((int*)(buf+40)));
-  *audioDataSize = *((int*)(buf+40)) - WAV_OFFSET;
-
-  return;
+  return 1;
 }
 
 /* -------------------------------------------------------------------------- */
 
-int setDefaultAudioFile(char* filename, AudioFile* a) {
+int addAudioFile(char* filename, AudioFile audioTable[], int i) {
   struct stat fileStat;
   int audioDataSize = 0;
 
@@ -83,49 +137,66 @@ int setDefaultAudioFile(char* filename, AudioFile* a) {
   }  
 
   // open file
-  a->fd = open(filename, O_RDONLY);
-  if (a->fd == -1) {
+  audioTable[i].fd = open(filename, O_RDONLY);
+  if (audioTable[i].fd == -1) {
     fprintf(stderr, "*** ERROR: cannot open file %s ***\n", filename);
     return -1;
   }    
     
   // get file size
-  if (fstat(a->fd, &fileStat) == -1) {
+  if (fstat(audioTable[i].fd, &fileStat) == -1) {
     fprintf(stderr, "*** ERROR: stat can't get file info ***\n");
     // close file
-    close(a->fd);
+    close(audioTable[i].fd);
     return -1;
   } 
 
   // store file size
-  a->fileSizeBytes = fileStat.st_size;
+  audioTable[i].fileSizeBytes = fileStat.st_size;
 
   // debugging
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "mmaping %s, size %d bytes\n", filename, a->fileSizeBytes);
+    fprintf(stderr, "mmaping %s, size %d bytes\n", filename, audioTable[i].fileSizeBytes);
 
   // mmap file
-  a->addr = mmap(NULL, a->fileSizeBytes,
+  audioTable[i].addr = mmap(NULL, audioTable[i].fileSizeBytes,
                 PROT_READ, MAP_PRIVATE, 
-                a->fd, 0);
-  if (a->addr == MAP_FAILED) {
+                audioTable[i].fd, 0);
+  if (audioTable[i].addr == MAP_FAILED) {
     fprintf(stderr, "*** ERROR: mmapping %s failed ***\n", filename);
     // reset data in audio file entry
-    close(a->fd);
-    a->fileSizeBytes = 0;
-    a->addr = NULL;
+    close(audioTable[i].fd);
+    audioTable[i].fileSizeBytes = 0;
+    audioTable[i].addr = NULL;
     return -1;
   } 
+
+  // start of audio data (...hardcoded kinda)
+  audioTable[i].audioAddr = audioTable[i].addr + WAV_OFFSET; 
+
+  // copy filename 
+  strcpy(audioTable[i].filename, filename);                                            
   
   // get WAV format file info
-  readWAV(a->addr, &audioDataSize);
+  if (readWAV(&audioTable[i]) < 0) {
+    // open .wav failed, reset data in audio file entry
+    close(audioTable[i].fd);
+    strcpy(audioTable[i].filename, "empty");
+    strcpy(audioTable[i].type, "unknown"); 
+    audioTable[i].fileSizeBytes = 0;
+    audioTable[i].addr = NULL;                               
+    audioTable[i].audioAddr = NULL;     
+    audioTable[i].nChannels = 0;        
+    audioTable[i].bitDepth = 0;                                           
+    audioTable[i].audioSizeSamples = 0;
+    audioTable[i].fileSizeBytes = 0;     
+    return -1;
+  }
 
   // store file info in data structure (should really be done in readWAV)
-  a->audioSizeSamples = audioDataSize / (sizeof(SAMPLE_TYPE));  // size of audio data
-  a->nChannels = NUM_CHAN;                                      // for now...hardcoded...
-  a->bitDepth = BIT_DEPTH;                                      // for now...also hardcoded...
-  a->audioAddr = a->addr + WAV_OFFSET;                           // start of audio data (...hardcoded kinda)
-  strcpy(a->filename, filename);                            // copy filename
+  // audioTable[i]->audioSizeSamples = audioDataSize / (sizeof(SAMPLE_TYPE));  // size of audio data
+  // audioTable[i]->nChannels = NUM_CHAN;                                      // for now...hardcoded...
+  // audioTable[i]->bitDepth = BIT_DEPTH;                                      // for now...also hardcoded...
 
   return 1;
 }

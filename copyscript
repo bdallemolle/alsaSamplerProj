@@ -1,13 +1,33 @@
 #!/bin/bash
 
+# remove all .c and .h files in demo5 folder
+rm demo5/*.c
+rm demo5/*.h
+
+# list of .c files to copy
+# CFILES="audio.c","audioFile.c"
+
+# list of .h files to copy
+# HFILES={sampler.h,audio.h,control.h,device.h}
+
 # copy files to demo5
+# cp ($CFILES) demo5
+# cp ${HFILES} demo5
+
+cp makefile demo5
 cp audioFile.c demo5
 cp audio.c demo5
 cp audio.h demo5
 cp control.c demo5
 cp control.h demo5
-cp parse.c demo5
-cp parse.h demo5
+cp config.c demo5
+cp config.h demo5
+cp device.h demo5
+cp device.c demo5
+cp raspiGPIO.c demo5
+cp raspiGPIO.h demo5
+# cp parse.c demo5
+# cp parse.h demo5
 cp sampler.h demo5
 cp main.c demo5
 cp makefile demo5

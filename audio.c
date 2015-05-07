@@ -11,6 +11,7 @@
 #include <alsa/asoundlib.h>
 // sampler proj headers
 #include "sampler.h"
+#include "config.h"
 #include "audio.h"
 #include "audioFile.h"
 
@@ -144,8 +145,35 @@ void clearAudioTable() {
     fprintf(stderr, " - Clearing the audio table.\n");
 
   int i;
-  for (i = 0; i < MAX_FILES; i++)
+  for (i = 0; i < MAX_AUDIO_FILES; i++)
     clearAudioTableEnt(i);
+  return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+// clears/zero-outs an entry in the mix table
+void clearSampleTableEnt(int i) {
+  sampleTable[i].id = i;                          // sample id
+  sampleTable[i].audioIdx = -1;                   // index into audio table
+  sampleTable[i].mixIdx = -1;                     // index into mix table
+  sampleTable[i].playbackState = STOPPED;         // playing/stopped state
+  sampleTable[i].overlay = 0;                     // toggle for overlayed sample
+  sampleTable[i].numOverlays = 0;                 // number of overlaid copies of sample playing 
+  sampleTable[i].digitalBehavior = NULL;                         // digital behavior function associated with sample             
+  return;
+}
+
+/* -------------------------------------------------------------------------- */
+
+// clears/zero-outs an entry in the mix table
+void clearSampleTable() {
+  if (AUDIO_INIT_DEBUG)
+    fprintf(stderr, " - Clearing the SAMPLE table.\n");
+
+  int i;
+  for (i = 0; i < MAX_SAMPLE; i++)
+    clearSampleTableEnt(i);
   return;
 }
 
@@ -154,7 +182,7 @@ void clearAudioTable() {
 // function to init/zero-out audio table
 int initAudioTable() {
   int i;
-  for (i = 0; i < MAX_FILES; i++)
+  for (i = 0; i < MAX_AUDIO_FILES; i++)
     audioTable[i].fd = -1;
   clearAudioTable();
   return 1; 
@@ -192,7 +220,7 @@ int mix(SAMPLE_TYPE buf[]) {
 
     // copy all valid samples
     for (j = sampleLimitLo, k = 0; j < sampleLimitHi; j++, k++) {
-      // check for clipping (a SUPER shitty hard-limiter)
+      // check for clipping (a SUPER basic hard-limiter)
       if (buf[k] + mixTable[i].addr[j] > POS_CLIP) {
         if (AUDIO_PLAY_DEBUG)
           fprintf(stderr, "[%d][%d] POSITIVE CLIP (%d) !\n", i, j, buf[k] + mixTable[i].addr[j]);
@@ -234,7 +262,7 @@ int initOutputDevice() {
   }
   
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "\n*** SOUND DEVICE '%s' OPEN ***\n", output_dev);
+    fprintf(stderr, "*** SOUND DEVICE '%s' OPEN ***\n", output_dev);
 
   // set ALSA parameters
   if ((err = snd_pcm_set_params(output_handle,  // playback handle
@@ -264,13 +292,13 @@ int playbackLoop() {
 
   // debugging
   if (AUDIO_PLAY_DEBUG)
-    fprintf(stderr, "\n*** STARTING AUDIO PLAYBACK LOOP! *** \n\n");
+    fprintf(stderr, "\n*** STARTING AUDIO PLAYBACK LOOP! *** \n");
   
   // loop until "killed" by main thread
   int isDone = 0;
   while (!isDone) {
     // zero buffer --- memset()
-    memset(buf, 0, FRAME_SIZE);
+    memset(buf, 0, FRAME_SIZE*sizeof(SAMPLE_TYPE));
 
     // mix buffer
     mix(buf);            
@@ -285,7 +313,7 @@ int playbackLoop() {
       return -1;
     }
 
-    // check exit conditions (is this bad practice to do so much locking?)
+    // check exit conditions
     pthread_mutex_lock(&exit_lock);
     if (EXIT_PLAYER) {
       if (AUDIO_PLAY_DEBUG)
@@ -316,12 +344,12 @@ void* playbackLaunch() {
  ******************************************************************************/
 
 // initializes audio player data structures and sound devices for playback
-int initAudio(char* output_dev_name) {
+int initAudio(CONFIG* c) {
   if (AUDIO_PLAY_DEBUG) 
     fprintf(stderr, " - Initializing audio!\n");
 
   // set global variables
-  strcpy(output_dev, output_dev_name);
+  strcpy(output_dev, c->audioOutputDevice);
 
   // init audio output device
   if (initOutputDevice() < 0) {
@@ -351,6 +379,14 @@ int initAudio(char* output_dev_name) {
     return -1;
   }
 
+  /************* set up audio table and mix table! *************/
+
+  // open audio files
+  setAudioTable(c->audioFiles, c->numAudioFiles);
+
+  // set sample table/mapping (need config arguments)
+  setSampleTable();
+
   return 1;
 }
 
@@ -371,31 +407,32 @@ int startAudio() {
 /* -------------------------------------------------------------------------- */
 
 // function to initiliaze audio file table (opens files)
-int setAudioTable(char* filenames[], int nFiles) {
+int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
   int i;
 
   // check valid number of sample files
-  if (nFiles > MAX_FILES) {
+  if (nFiles > MAX_AUDIO_FILES) {
     fprintf(stderr, "*** ERROR: Trying to open too many audio files. ***\n");
     return -1;
   }
 
   // open all files
   for (i = 0; i < nFiles; i++) {
-    setDefaultAudioFile(filenames[i], &audioTable[i]);
+    addAudioFile(filenames[i], audioTable, i);        // change this to audio table + index
     if (AUDIO_INIT_DEBUG)
       printAudioFileInfo(i);
   }
   
+  // debugging
   if (AUDIO_INIT_DEBUG)
     fprintf(stderr, " - %d files opened\n", i);
 
   // set extra audioTable file entries to blank
-  if (i < MAX_FILES) {
+  if (i < MAX_AUDIO_FILES) {
     if (AUDIO_INIT_DEBUG) {
       fprintf(stderr, " - Zeroing out remaining entries\n");
     }
-    while (i < MAX_FILES) {
+    while (i < MAX_AUDIO_FILES) {
       clearAudioTableEnt(i);
       i++;
     }
@@ -408,7 +445,9 @@ int setAudioTable(char* filenames[], int nFiles) {
 
 // needs a configuration arguement
 int setSampleTable() {
+  int i = 0;
   fprintf(stderr, "*** SET SAMPLE TABLE! ***\n");
+  clearSampleTable();
   return 1;
 }                     
 
@@ -476,6 +515,10 @@ int sampleRestart(int sampleID) {
 int sampleOverlay(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
     fprintf(stderr, " - Sample %d told to play OVERLAID!\n");
+  // get file num for sample ID
+
+  // set mix table playback
+
   return 1;
 }
 

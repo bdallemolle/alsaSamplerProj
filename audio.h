@@ -1,20 +1,18 @@
 // Macros
-#define MAX_FILES       4			                      // Max sound files used in sampler (*** FOR NOW ***)
-#define MAX_MIX   	    16			                    // Max sounds that can be mixed at ones (*** FOR NOW ***)
-#define MAX_NAME  	    80                          // Max filename size
-#define MAX_SAMPLE      8                           // Max number of samples you can use
-#define PLAYING         1                           //
-#define STOPPED         0                           // 
+#define MAX_MIX   	    16			                    // max sounds that can be mixed at ones (*** FOR NOW ***)
+#define MAX_SAMPLE      8                           // max number of samples you can use
+#define PLAYING         1                           // macro for "is playing" boolean behevior
+#define STOPPED         0                           // macro for "is stopped" boolean behevior
+#define WAV_OFFSET      44                          // size (bytes) of .wav file header 
 
 /* EVENTUALLY OBSOLETE MACROS - USER PARAMS AND ALSA MIXING SHOULD TAKE CARE OF THIS */
-#define FRAME_SAMP      256                         // Number of multi-channel samples
-#define NUM_CHAN        2                           // Number of channels of playback
-#define FRAME_SIZE      (FRAME_SAMP * NUM_CHAN)     // Total size (in samples) of a playback frame
+#define FRAME_SAMP      256                         // number of multi-channel samples
+#define NUM_CHAN        2                           // number of channels of playback
+#define FRAME_SIZE      (FRAME_SAMP * NUM_CHAN)     // total size (in samples) of a playback frame
 #define SAMPLE_RATE     44100                       // 44.1k sample rate (default)
-#define WAV_OFFSET      44                          // Size (bytes) of .wav file header
-#define BIT_DEPTH       16                          // Playback bit depth
-#define POS_CLIP        32676                       // Max value of 16-bit PCM  
-#define NEG_CLIP        -32768                      // Min value of 16-bit PCM 
+#define BIT_DEPTH       16                          // playback bit depth
+#define POS_CLIP        32676                       // max value of 16-bit PCM  
+#define NEG_CLIP        -32768                      // min value of 16-bit PCM 
 typedef short SAMPLE_TYPE;                          // size of 16-bit PCM audio
 typedef short* SAMPLE_PTR;                          // pointer to 16-bit PCM audio data
 
@@ -49,6 +47,7 @@ typedef struct {
 
 typedef struct {
   int id;                             // sample id
+  int audioIdx;                       // index into audio table
   int mixIdx;                         // index into mix table
   int playbackState;                  // playing/stopped state
   int overlay;                        // toggle for overlayed sample
@@ -57,22 +56,22 @@ typedef struct {
   // void (*analogBehavior)(double);  // 
 } Sample;
 
-AudioFile audioTable[MAX_FILES];          // the audio file table
+AudioFile audioTable[MAX_AUDIO_FILES];    // the audio file table
 AudioLink mixTable[MAX_MIX];              // the mix table
 Sample sampleTable[MAX_SAMPLE];           // the sample table 
 
 // Initialization functions
-int initAudio(char* output_dev_name);     // init audio device - EVENTUALLY MORE GENERAL INIT ARGUEMENT
-int startAudio();                         // starts playback loop/thread
-int setAudioTable(char* filenames[],      // sets the audio table with provided audio files
+int initAudio(CONFIG* c);                                         // init audio device
+int startAudio();                                                 // starts playback loop/thread
+int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME],      // sets the audio table with provided audio files
                   int nFiles);                            
-int setSampleTable();                     // set the sample table mapping
+int setSampleTable();                                             // set the sample table mapping
 
 // Exit functions 
 int exitAudio();                          // exits audio device
 int killAudio();                          // kills playback loop/thread
 void clearAudioTable();                   // clears audio table
-int clearSampleTable();                   // clears sample table
+void clearSampleTable();                  // clears sample table
 
 // Sample functions
 int sampleStart(int sampleID);            // starts a sample
@@ -81,10 +80,10 @@ int sampleRestart(int sampleID);          // restarts a sample
 int sampleOverlay(int sampleID);          // plays a sample over itself (mix table limit providing...)
 int sampleStopALL();                      // stops all sample playback
 
-/*** ARCHAIC WAY TO SET FILES FOR PLAYBACK... ***/
-int setPlaybackSound(int idx);            // sets an audio file for playback in mixer directly
-
 // file open functions
 void printAudioFileInfo(int tableIdx);
-int setDefaultAudioFile(char* filename, AudioFile* a);
+int addAudioFile(char* filename, AudioFile audioTable[], int i);
+
+/*** INELEGANT WAY TO SET FILES FOR PLAYBACK... ***/
+int setPlaybackSound(int idx);            // sets an audio table indexed file for playback in mixer directly
 
