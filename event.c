@@ -5,8 +5,11 @@
 // alsa-proj headers
 #include "sampler.h"
 #include "config.h"
+#include "device.h"
 #include "audio.h"
 #include "event.h"
+
+int lightState = 0;
 
 /* -------------------------------------------------------------------------- */
 
@@ -61,11 +64,27 @@ int playSampleLoopWithStop(int idx) {
 /* -------------------------------------------------------------------------- */
 
 int oneHitSample(int idx) {
-
 	fprintf(stderr, " - ONE HIT SAMPLE EVENT CALLED\n");
-
 	sampleRestart(e.args[idx]);
+	return 1;
+}
 
+/* -------------------------------------------------------------------------- */
+
+int lightDemoToggle(int val) {
+	if (lightState == 0 && val == 1) {
+		fprintf(stderr, "*** LIGHT ON! ***\n");
+		// turn on light
+		controlDev.digitalWrite(light_fd, 0);
+		// set light state to true
+		lightState = 1;
+	}
+	else if (lightState == 1 && val == 0) {
+		fprintf(stderr, "*** LIGHT OFF! ***\n");
+		// turn off light
+		controlDev.digitalWrite(light_fd, 1);
+		lightState = 0;
+	}
 	return 1;
 }
 
@@ -89,6 +108,10 @@ int initEvents(CONFIG* c) {
 			e.args[i] = c->sampleMap[i];
 		}
 	}
+
+	/* SET LIGHT BEHAVIOR! */
+	e.event[LIGHT] = &lightDemoToggle;
+	e.args[LIGHT] = 1;
 
     return 1;
 }

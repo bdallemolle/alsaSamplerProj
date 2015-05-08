@@ -201,13 +201,13 @@ int gpio_fd_close(int fd) {
  * ret: 	the fd of the opened gpio							*
  ****************************************************************/
 
-int gpio_OPEN(unsigned int gpio) {
+int gpio_OPEN(unsigned int gpio, int dir) {
   	fprintf(stderr, "SETTING UP GPIO %d!\n", gpio);
 
   	// export gpio
   	gpio_export(gpio);
   	// set direction
-  	gpio_set_dir(gpio, 0);
+  	gpio_set_dir(gpio, dir);
   	// set edge
   	gpio_set_edge(gpio, "rising");
 
@@ -264,10 +264,7 @@ void readRaspiGPIO(int fd, char* val) {
 		*val = 0;
 		return;
 	}
-
-	// get rid of this eventually
-	// fprintf(stderr, "READING FD %d - GPIO %d\n", fd, gpio);
-
+	
 	// set read value
 	*val = (char)gpio_GETVAL(gpio);
 
@@ -286,7 +283,7 @@ void writeRaspiGPIO(int fd, char val) {
 		if (fd == raspiWriteFdMap[i])
 			gpio = raspiPinMap[i];
 
-	if (i == NUM_RASPI_GPIO) {
+	if (gpio == -1) {
 		fprintf(stderr, "*** ERROR WRITING TO FD %d ***\n", fd);
 		return;
 	}
@@ -296,7 +293,7 @@ void writeRaspiGPIO(int fd, char val) {
 
 	// set read value
 	if (gpio_SETVAL(gpio, (int)val) <= 0) 
-		fprintf(stderr, "*** ERROR SETTING ");
+		fprintf(stderr, "*** ERROR SETTING GPIO %d\n", gpio);
 
 	return;
 }
@@ -332,7 +329,7 @@ int initRaspiGPIO(CONFIG* c) {
 			if (DEVICE_INIT_DEBUG)
 				fprintf(stderr, " - setting to READ device idx %d to %d\n", i, c->readMap[i]);
 			// open GPIO pin
-			if ((controlDev.readPorts[i] = gpio_OPEN(c->readMap[i])) > 0) {
+			if ((controlDev.readPorts[i] = gpio_OPEN(c->readMap[i], 0)) > 0) {
 				controlDev.numReadPorts++;
 				raspiReadFdMap[j] = controlDev.readPorts[i];
 				if (DEVICE_INIT_DEBUG)
@@ -345,7 +342,7 @@ int initRaspiGPIO(CONFIG* c) {
 	}
 
 	// set writing ports
-	for (i = 0, idx = 0; i < c->numWritePorts; i++) {
+	for (i = 0; i < c->numWritePorts; i++) {
 		// verify legal pin
 		for (j = 0; j < NUM_RASPI_GPIO; j++)
 			if (c->writeMap[i] == raspiPinMap[j])
@@ -360,12 +357,14 @@ int initRaspiGPIO(CONFIG* c) {
 			if (DEVICE_INIT_DEBUG)
 				fprintf(stderr, " - setting to WRITE device idx %d to %d\n", idx, c->writeMap[i]);
 			// open GPIO pin
-			if ((controlDev.writePorts[idx] = gpio_OPEN(c->writeMap[i])) > 0) {
+			if ((controlDev.writePorts[i] = gpio_OPEN(c->writeMap[i], 1)) > 0) {
 				controlDev.numWritePorts++;
-				raspiWriteFdMap[j] = controlDev.writePorts[idx];
+				raspiWriteFdMap[j] = controlDev.writePorts[i];
+				/* GET RID OF THIS EVENTUALLY!!! */
+				light_fd = controlDev.writePorts[i];
+				/* GET RID OF THE ABOVE LINE ITS SO HACKY */
 				if (DEVICE_INIT_DEBUG)
-					fprintf(stderr, " * fd = %d\n", controlDev.writePorts[idx]);
-				idx++;
+					fprintf(stderr, " * fd = %d\n", controlDev.writePorts[i]);
 			}
 			else {
 				fprintf(stderr, "*** ERROR: cannot open specified GPIO pin! ***\n");

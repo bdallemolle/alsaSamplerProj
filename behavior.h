@@ -7,4 +7,3 @@ BEHAVIOR b;
 
 // initialization function
 int initBehavior(CONFIG* c);
-

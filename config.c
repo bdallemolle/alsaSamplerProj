@@ -60,14 +60,15 @@ int config(CONFIG* c) {
 	c->event[0] = 1;								// EVENT 1 == REGULAR SAMPLE START/STOP
 	c->event[1] = 2;								// EVENT 2 == ONE-HIT SAMPLE
 	c->numAudioFiles = 2;							// hardcoding number of audio files
+	// set devices...
 	c->controlDevID = 2;							// RASPI_GPIO number
-	c->readMap[0] = 4;								// set raspi pin 2
+	c->readMap[0] = 4;								// set raspi pin 4
 	c->behavior[0] = 2;								// BEHAVE 1 == DOWN PRESS BUTTON
-	c->readMap[1] = 17;								// set raspi pin 3
+	c->readMap[1] = 17;								// set raspi pin 17
 	c->behavior[1] = 1;								// BEHAVE 2 == UP PRESS BUTTON
 	c->numReadPorts= 2;								// set number of read ports
-	c->writeMap[0] = 22;							// set raspi pin 17
-	c->numWritePorts= 0;							// set number of read ports
+	c->writeMap[0] = 22;							// set raspi pin 22
+	c->numWritePorts= 1;							// set number of read ports
 
 	// set some debug flags
 	AUDIO_INIT_DEBUG = 1;

@@ -14,6 +14,8 @@
 
 /*** temporary #defines for demo ***/
 #define OUTPUT_DEV 	    "sysdefault:CARD=CODEC" 	  // playback device name
+#define LIGHT			(MAX_IO - 1)
+int light_fd;
 /*** get rid of these eventually! ***/
 
 // toggle typedef (for digital HI/LO binary reading)

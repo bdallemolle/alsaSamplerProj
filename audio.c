@@ -114,7 +114,7 @@ int setMixTableFile(int audioFileIdx, Sample* sample) {
   fprintf(stderr, "audio table size samples = %d\n", audioTable[audioFileIdx].audioSizeSamples);
   fprintf(stderr, "%d last frame idx\n", mixTable[openMixIdx].lastIdx);
   if (mixTable[openMixIdx].s != NULL)
-    fprintf(stderr, "sample id = %d", mixTable[openMixIdx].s->id);
+    fprintf(stderr, "sample id = %d\n", mixTable[openMixIdx].s->id);
 
   // release mix table lock
   pthread_mutex_unlock(&mix_lock);
@@ -285,7 +285,7 @@ int initOutputDevice() {
              NUM_CHAN,                          // number of channels
              SAMPLE_RATE,                       // sampler rate
              1,                                 // soft resample (?)
-             500))                              // latency (500 microseconds)
+             1000))                             // latency (500 microseconds)
              < 0) {
     fprintf(stderr, "*** ERROR: set parameters error(%s)\n", snd_strerror(err));
     return -1;

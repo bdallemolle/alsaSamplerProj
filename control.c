@@ -35,8 +35,8 @@ int setPollTable(struct pollfd fdset[], int* nfds) {
 
   // go through device and listen to all open fd's
   for (i = 0; i < controlDev.numReadPorts; i++) {
-    fdset[i+1].fd = controlDev.readPorts[i];
-    fdset[i+1].events = POLLIN;
+    fdset[i + 1].fd = controlDev.readPorts[i];
+    fdset[i + 1].events = POLLIN;
   }
 
   *nfds = controlDev.numReadPorts + 1;
@@ -53,7 +53,7 @@ int run(CONFIG* c) {
   char buf[MAX_NAME];                 // stdin input buffer
   bool isDone = FALSE;                // boolean loop toggle
   int retval = -1;                    // 
-  char val;                            //
+  char val;                           //
   int i = 0;                          // loop index variables
 
 	fprintf(stderr, "*** RUN CALLED! DO \"CONTROL\" STUFF ***\n");
@@ -79,7 +79,6 @@ int run(CONFIG* c) {
       isDone = 1;
     }
     else if (retval) {
-      // fprintf(stderr, "retval for select %d\n", retval);
       if (fdset[0].revents & POLLIN) {
         fprintf(stderr, "INPUT FRON STDIN!\n");
         fgets(buf, 80, stdin);
@@ -87,7 +86,7 @@ int run(CONFIG* c) {
         if (strcmp("-q\n", buf) == 0) {
           isDone = 1;
           // should kill sound here
-          fprintf(stdout, "Exiting main loop...\n");
+          fprintf(stdout, "Exiting program...\n");
         }
         else {
           fprintf(stdout, "Error reading STDIN input...\n");
@@ -96,14 +95,15 @@ int run(CONFIG* c) {
       for (i = 1; i < nfds; i++) {
         if (fdset[i].revents & POLLIN) {
           // read device
-          controlDev.digitalRead(controlDev.readPorts[i-1], &val);
+          controlDev.digitalRead(controlDev.readPorts[i - 1], &val);
           // call behavior for device
-          if (b.behavior[i-1](i, val)) {
-            fprintf(stderr, " - CALL EVENT FUNCTION!\n");
-            e.event[i-1](i-1);
+          if (b.behavior[i - 1](i, val)) {
+            e.event[i - 1](i - 1);
           }
         }
       }
+      // hacky way to do light status
+      e.event[LIGHT](b.behavior[LIGHT](LIGHT, val));
     }
     else {
       fprintf(stderr, " - POLL TIMEOUT...\n");

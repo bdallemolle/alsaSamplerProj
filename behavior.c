@@ -5,6 +5,7 @@
 // alsa-proj headers
 #include "sampler.h"
 #include "config.h"
+#include "audio.h"
 #include "behavior.h"
 
 int previousButtonVal[MAX_IO];
@@ -58,6 +59,20 @@ int upPressButton(int i, int val) {
 
 /* -------------------------------------------------------------------------- */
 
+int lightDemo(int j, int val) {
+	int i = 0;
+	// fprintf(stderr, "*** LIGHT DEMO CALLED ***\n");
+
+	for (i = 0; i < MAX_SAMPLE; i++) {
+		if (sampleTable[i].playbackState == PLAYING) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/* -------------------------------------------------------------------------- */
+
 int initBehavior(CONFIG* c) {
 	int i = 0;
 
@@ -75,6 +90,9 @@ int initBehavior(CONFIG* c) {
 			b.numBehaviors++;
 		}
 	}
+
+	/* SET LIGHT BEHAVIOR! */
+	b.behavior[LIGHT] = &lightDemo;
 
     return 0;
 }
