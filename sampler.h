@@ -23,4 +23,5 @@ typedef enum {TRUE = 1, FALSE = 0} bool;
 // debugging globals
 int AUDIO_INIT_DEBUG;            // debugging messages regarding audio object initialization
 int AUDIO_PLAY_DEBUG;            // debugging messages regarding audio playback
+int DEVICE_INIT_DEBUG;			 // debugging messages for device initialization
 

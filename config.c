@@ -62,6 +62,7 @@ int config(CONFIG* c) {
 	// set some debug flags
 	AUDIO_INIT_DEBUG = 1;
 	AUDIO_PLAY_DEBUG = 1;
+	DEVICE_INIT_DEBUG = 1;
 
 	return 1;	// success!
 }

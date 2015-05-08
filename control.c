@@ -13,8 +13,9 @@
 #include "sampler.h"
 #include "config.h"
 #include "control.h"
-#include "audio.h"
 #include "device.h"
+#include "audio.h"
+
 
 /* -------------------------------------------------------------------------- */
 
@@ -60,7 +61,7 @@ int run(CONFIG* c) {
 
   // a bad hack for avoiding initial overruns
   fprintf(stderr, "Waiting...\n");
-  sleep(2);
+  sleep(1);
   fprintf(stderr, "DONE!\n");
 
   // start audio thread!
@@ -94,6 +95,7 @@ int run(CONFIG* c) {
         if (fdset[i].revents & POLLIN) {
           controlDev.digitalRead(fdset[i].fd, &val);
           // controlDev.behavior( )
+          // controlDev.event( )
           fprintf(stderr, "READ %d\n", val);
         }
       }

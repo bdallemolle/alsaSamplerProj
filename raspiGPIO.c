@@ -13,12 +13,12 @@
 // alsa-project header
 #include "sampler.h"
 #include "config.h"
-#include "raspiGPIO.h"
 #include "device.h"
+#include "raspiGPIO.h"
 
 int raspiPinMap[] = {2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 17, 18, 22, 23, 24, 25, 27};
-int raspiStateMemory[NUM_RASPI_GPIO];
-int numStateMemory;
+int raspiReadFdMap[NUM_RASPI_GPIO];
+int raspiWriteFdMap[NUM_RASPI_GPIO];
 
 /****************************************************************
  * Include gpio header interface 								*
@@ -30,8 +30,7 @@ int numStateMemory;
  * gpio_export 													*
  ****************************************************************/
 
-int gpio_export(unsigned int gpio)
-{
+int gpio_export(unsigned int gpio) {
 	int fd, len;
 	char buf[MAX_BUF];
  
@@ -52,8 +51,7 @@ int gpio_export(unsigned int gpio)
  * gpio_unexport												*
  ****************************************************************/
 
-int gpio_unexport(unsigned int gpio)
-{
+int gpio_unexport(unsigned int gpio) {
 	int fd, len;
 	char buf[MAX_BUF];
  
@@ -73,8 +71,7 @@ int gpio_unexport(unsigned int gpio)
  * gpio_set_dir													*
  ****************************************************************/
 
-int gpio_set_dir(unsigned int gpio, unsigned int out_flag)
-{
+int gpio_set_dir(unsigned int gpio, unsigned int out_flag) {
 	int fd, len;
 	char buf[MAX_BUF];
  
@@ -99,8 +96,7 @@ int gpio_set_dir(unsigned int gpio, unsigned int out_flag)
  * gpio_set_value												*
  ****************************************************************/
 
-int gpio_set_value(unsigned int gpio, unsigned int value)
-{
+int gpio_set_value(unsigned int gpio, unsigned int value) {
 	int fd, len;
 	char buf[MAX_BUF];
  
@@ -125,8 +121,7 @@ int gpio_set_value(unsigned int gpio, unsigned int value)
  * gpio_get_value												*
  ****************************************************************/
 
-int gpio_get_value(unsigned int gpio, unsigned int *value)
-{
+int gpio_get_value(unsigned int gpio, unsigned int *value) {
 	int fd, len;
 	char buf[MAX_BUF];
 	char ch;
@@ -156,8 +151,7 @@ int gpio_get_value(unsigned int gpio, unsigned int *value)
  * gpio_set_edge
  ****************************************************************/
 
-int gpio_set_edge(unsigned int gpio, char *edge)
-{
+int gpio_set_edge(unsigned int gpio, char *edge) {
 	int fd, len;
 	char buf[MAX_BUF];
 
@@ -178,8 +172,7 @@ int gpio_set_edge(unsigned int gpio, char *edge)
  * gpio_fd_open
  ****************************************************************/
 
-int gpio_fd_open(unsigned int gpio)
-{
+int gpio_fd_open(unsigned int gpio) {
 	int fd, len;
 	char buf[MAX_BUF];
 
@@ -196,8 +189,7 @@ int gpio_fd_open(unsigned int gpio)
  * gpio_fd_close
  ****************************************************************/
 
-int gpio_fd_close(int fd)
-{
+int gpio_fd_close(int fd) {
 	return close(fd);
 }
 
@@ -256,21 +248,55 @@ int gpio_SETVAL(unsigned int gpio_fd, int val) {
 }
 
 /****************************************************************
- * readRaspiGPIO() 												*
+ * readRaspiGPIO() - current ehh gpio read function				*
  ****************************************************************/
 
 void readRaspiGPIO(int fd, char* val) {
-	char ch;
-	// fprintf(stderr, " - READ RASPI GPIO CALLED FOR FD %d\n", fd);
+	int i = 0;
+	int gpio = -1;
 
-	read(fd, &ch, 1);
+	for (i = 0; i < NUM_RASPI_GPIO; i++) 
+		if (fd == raspiReadFdMap[i])
+			gpio = raspiPinMap[i];
 
-	if (ch != '0') {
-		*val = 1;
-	} else {
-		*val = 0;
+	if (i == NUM_RASPI_GPIO) {
+		fprintf(stderr, "*** ERROR READING FROM FD %d ***\n", fd);
+		return;
 	}
-	// *val = (char)gpio_GETVAL(fd);
+
+	// get rid of this eventually
+	fprintf(stderr, "READING FD %d - GPIO %d\n", fd, gpio);
+
+	// set read value
+	*val = (char)gpio_GETVAL(gpio);
+
+	return;
+}
+
+/****************************************************************
+ * writeRaspiGPIO() - current ehh gpio write function			*
+ ****************************************************************/
+
+void writeRaspiGPIO(int fd, char val) {
+	int i = 0;
+	int gpio = -1;
+
+	for (i = 0; i < NUM_RASPI_GPIO; i++) 
+		if (fd == raspiReadFdMap[i])
+			gpio = raspiPinMap[i];
+
+	if (i == NUM_RASPI_GPIO) {
+		fprintf(stderr, "*** ERROR WRITING TO FD %d ***\n", fd);
+		return;
+	}
+
+	// get rid of this eventually
+	fprintf(stderr, "WRITING FD %d - GPIO %d\n", fd, gpio);
+
+	// set read value
+	if (gpio_SETVAL(gpio, (int)val) <= 0) 
+		fprintf(stderr, "*** ERROR SETTING ");
+
 	return;
 }
 
@@ -282,7 +308,12 @@ int initRaspiGPIO(CONFIG* c) {
 	int i = 0, j = 0, idx = 0;
 
 	// populate raspiGPIOpin array with default values
-	fprintf(stderr, "*** INIT RASPI GPIO CALLED! ***\n");
+	if (DEVICE_INIT_DEBUG)
+		fprintf(stderr, "*** INIT RASPI GPIO CALLED! ***\n");
+
+	// zero out fd->gpio mapping arrays
+	memset(raspiReadFdMap, 0, sizeof(int)*NUM_RASPI_GPIO);
+	memset(raspiWriteFdMap, 0, sizeof(int)*NUM_RASPI_GPIO);
 
 	// set reading ports
 	for (i = 0, idx = 0; i < c->numReadPorts; i++) {
@@ -296,11 +327,20 @@ int initRaspiGPIO(CONFIG* c) {
 			break;
 		}
 		else {
-			fprintf(stderr, " - setting to READ idx %d to %d\n", idx, c->readMap[i]);
-			controlDev.readPorts[idx] = gpio_OPEN(c->readMap[i]);
-			controlDev.numReadPorts++;
-			fprintf(stderr, " * fd = %d\n", controlDev.readPorts[idx]);
-			idx++;
+			// debugging
+			if (DEVICE_INIT_DEBUG)
+				fprintf(stderr, " - setting to READ device idx %d to %d\n", idx, c->readMap[i]);
+			// open GPIO pin
+			if ((controlDev.readPorts[idx] = gpio_OPEN(c->readMap[i])) > 0) {
+				controlDev.numReadPorts++;
+				raspiReadFdMap[j] = controlDev.readPorts[idx];
+				if (DEVICE_INIT_DEBUG)
+					fprintf(stderr, " * fd = %d\n", controlDev.readPorts[idx]);
+				idx++;
+			}
+			else {
+				fprintf(stderr, "*** ERROR: cannot open specified GPIO pin! ***\n");
+			}
 		}
 	}
 
@@ -316,16 +356,26 @@ int initRaspiGPIO(CONFIG* c) {
 			break;
 		}
 		else {
-			fprintf(stderr, " - setting to WRITE device idx %d to %d\n", idx, c->writeMap[i]);
-			controlDev.writePorts[idx] = gpio_OPEN(c->writeMap[i]);
-			controlDev.numWritePorts++;
-			fprintf(stderr, " * fd = %d\n", controlDev.writePorts[idx]);
-			idx++;
+			// debugging
+			if (DEVICE_INIT_DEBUG)
+				fprintf(stderr, " - setting to WRITE device idx %d to %d\n", idx, c->writeMap[i]);
+			// open GPIO pin
+			if ((controlDev.writePorts[idx] = gpio_OPEN(c->writeMap[i])) > 0) {
+				controlDev.numWritePorts++;
+				raspiWriteFdMap[j] = controlDev.writePorts[idx];
+				if (DEVICE_INIT_DEBUG)
+					fprintf(stderr, " * fd = %d\n", controlDev.writePorts[idx]);
+				idx++;
+			}
+			else {
+				fprintf(stderr, "*** ERROR: cannot open specified GPIO pin! ***\n");
+			}
 		}
 	}
 
 	// set function pointers
 	controlDev.digitalRead = &readRaspiGPIO;
+	controlDev.digitalWrite = &writeRaspiGPIO;
 
 	return 1;
 }
@@ -338,6 +388,4 @@ int closeRaspiGPIO() {
 	fprintf(stderr, "*** CLOSING RASPI GPIO - NOT IMPLEMENTED! ***");
 	return 1;
 }
-
-
 
