@@ -13,7 +13,9 @@
 #include "sampler.h"
 #include "config.h"
 #include "control.h"
+#include "behavior.h"
 #include "device.h"
+#include "event.h"
 #include "audio.h"
 
 
@@ -81,7 +83,7 @@ int run(CONFIG* c) {
       if (fdset[0].revents & POLLIN) {
         fprintf(stderr, "INPUT FRON STDIN!\n");
         fgets(buf, 80, stdin);
-        // quick, hacky parse
+        // quick, hacky parse for exiting only
         if (strcmp("-q\n", buf) == 0) {
           isDone = 1;
           // should kill sound here
@@ -93,10 +95,13 @@ int run(CONFIG* c) {
       }
       for (i = 1; i < nfds; i++) {
         if (fdset[i].revents & POLLIN) {
-          controlDev.digitalRead(fdset[i].fd, &val);
-          // controlDev.behavior( )
-          // controlDev.event( )
-          fprintf(stderr, "READ %d\n", val);
+          // read device
+          controlDev.digitalRead(controlDev.readPorts[i-1], &val);
+          // call behavior for device
+          if (b.behavior[i-1](i, val)) {
+            fprintf(stderr, " - CALL EVENT FUNCTION!\n");
+            e.event[i-1](i-1);
+          }
         }
       }
     }

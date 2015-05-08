@@ -39,6 +39,7 @@ void clearMixTableEnt(int i) {
    mixTable[i].lastSubFrame = 0;
    mixTable[i].lastSubSampleIdx = 0;
    mixTable[i].blackSpot = 0;
+   mixTable[i].s = NULL;
    return;
 }
 
@@ -71,7 +72,7 @@ int initMixTable() {
 
 /* -------------------------------------------------------------------------- */
 
-int setMixTableFile(int audioFileIdx) {
+int setMixTableFile(int audioFileIdx, Sample* sample) {
   int openMixIdx = -1;
 
   if (AUDIO_PLAY_DEBUG) 
@@ -104,6 +105,7 @@ int setMixTableFile(int audioFileIdx) {
   mixTable[openMixIdx].lastIdx = mixTable[openMixIdx].nFrames; 
   mixTable[openMixIdx].lastSubSampleIdx = (audioTable[audioFileIdx].audioSizeSamples 
                                           - (mixTable[openMixIdx].nFrames * FRAME_SIZE));
+  mixTable[openMixIdx].s = sample;
   
   // print debugging
   fprintf(stderr, "%d last frame sub sample idx\n", mixTable[openMixIdx].lastSubSampleIdx);
@@ -111,6 +113,8 @@ int setMixTableFile(int audioFileIdx) {
   fprintf(stderr, "%d frames in sample\n", mixTable[openMixIdx].nFrames);  
   fprintf(stderr, "audio table size samples = %d\n", audioTable[audioFileIdx].audioSizeSamples);
   fprintf(stderr, "%d last frame idx\n", mixTable[openMixIdx].lastIdx);
+  if (mixTable[openMixIdx].s != NULL)
+    fprintf(stderr, "sample id = %d", mixTable[openMixIdx].s->id);
 
   // release mix table lock
   pthread_mutex_unlock(&mix_lock);
@@ -160,7 +164,8 @@ void clearSampleTableEnt(int i) {
   sampleTable[i].playbackState = STOPPED;         // playing/stopped state
   sampleTable[i].overlay = 0;                     // toggle for overlayed sample
   sampleTable[i].numOverlays = 0;                 // number of overlaid copies of sample playing 
-  sampleTable[i].digitalBehavior = NULL;                         // digital behavior function associated with sample             
+  sampleTable[i].loop = FALSE;                    // 
+  sampleTable[i].digitalBehavior = NULL;          // digital behavior function associated with sample             
   return;
 }
 
@@ -234,8 +239,17 @@ int mix(SAMPLE_TYPE buf[]) {
       else buf[k] += mixTable[i].addr[j];
     }
 
-    if (lastIdx) {
-      // this is very temporary...
+    if (lastIdx && mixTable[i].s->loop) {
+      mixTable[i].idx = 0;
+      i--;
+    }
+    else if (lastIdx) {
+      // set sample to NOT playing
+      mixTable[i].s->playbackState = STOPPED;
+      clearMixTableEnt(i);
+    }
+    else if (mixTable[i].blackSpot) {
+      mixTable[i].s->playbackState = STOPPED;
       clearMixTableEnt(i);
     }
     else {
@@ -385,7 +399,7 @@ int initAudio(CONFIG* c) {
   setAudioTable(c->audioFiles, c->numAudioFiles);
 
   // set sample table/mapping (need config arguments)
-  setSampleTable();
+  setSampleTable(c->audioFiles, c->sampleMap);
 
   return 1;
 }
@@ -444,10 +458,19 @@ int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
 /* -------------------------------------------------------------------------- */
 
 // needs a configuration arguement
-int setSampleTable() {
+int setSampleTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int sampleMap[]) {
   int i = 0;
-  fprintf(stderr, "*** SET SAMPLE TABLE! ***\n");
+  fprintf(stderr, "*** SETTING SAMPLE TABLE! ***\n");
   clearSampleTable();
+
+  for (i = 0; i < MAX_SAMPLE; i++) {
+    if (sampleMap[i] >= 0) {
+      if (AUDIO_INIT_DEBUG)
+        fprintf(stderr, " - audio.c: setting sample %d to audio file %d\n", i, sampleMap[i]);
+      sampleTable[i].audioIdx = sampleMap[i];                       
+    }
+  }
+
   return 1;
 }                     
 
@@ -490,7 +513,22 @@ int killAudio() {
 
 int sampleStart(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
-    fprintf(stderr, " - Sample %d told to START\n");
+    fprintf(stderr, " - Sample %d told to START\n", sampleID);
+
+  if (sampleID < 0) 
+    return -1;
+
+  // don't start sample if already playing
+  if (sampleTable[sampleID].playbackState == PLAYING) {
+    if (AUDIO_PLAY_DEBUG)
+      fprintf(stderr, " - Sample %d already playing, can't start again!\n", sampleID);
+
+    return 1;
+  }
+
+  sampleTable[sampleID].mixIdx = setMixTableFile(sampleTable[sampleID].audioIdx, &sampleTable[sampleID]);
+  sampleTable[sampleID].playbackState = PLAYING;
+
   return 1;
 }
 
@@ -498,7 +536,12 @@ int sampleStart(int sampleID) {
 
 int sampleStop(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
-    fprintf(stderr, " - Sample %d told to STOP\n");
+    fprintf(stderr, " - Sample %d told to STOP\n", sampleID);
+
+  pthread_mutex_lock(&mix_lock);
+  mixTable[sampleTable[sampleID].mixIdx].blackSpot = 1;
+  pthread_mutex_unlock(&mix_lock);
+
   return 1;
 }
 
@@ -506,7 +549,41 @@ int sampleStop(int sampleID) {
 
 int sampleRestart(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
-    fprintf(stderr, " - Sample %d told to RESTART\n");
+    fprintf(stderr, " - Sample %d told to RESTART\n", sampleID);
+
+  if (sampleTable[sampleID].playbackState == STOPPED) {
+    sampleStart(sampleID);
+  }
+  else {
+    sampleStop(sampleID);
+    sampleTable[sampleID].mixIdx = setMixTableFile(sampleTable[sampleID].audioIdx, &sampleTable[sampleID]);
+    sampleTable[sampleID].playbackState = PLAYING;
+  }
+
+  return 1;
+}
+
+/* -------------------------------------------------------------------------- */
+
+int sampleStartLoop(int sampleID) {
+  if (AUDIO_PLAY_DEBUG)
+    fprintf(stderr, " - Sample %d told to START\n", sampleID);
+
+  if (sampleID < 0) 
+    return -1;
+
+  // don't start sample if already playing
+  if (sampleTable[sampleID].playbackState == PLAYING) {
+    if (AUDIO_PLAY_DEBUG)
+      fprintf(stderr, " - Sample %d already playing, can't start again!\n", sampleID);
+
+    return 1;
+  }
+
+  sampleTable[sampleID].mixIdx = setMixTableFile(sampleTable[sampleID].audioIdx, &sampleTable[sampleID]);
+  sampleTable[sampleID].playbackState = PLAYING;
+  sampleTable[sampleID].loop = TRUE;
+
   return 1;
 }
 
@@ -533,5 +610,5 @@ int sampleStopALL() {
 /* -------------------------------------------------------------------------- */
 
 int setPlaybackSound(int idx) {
-  return setMixTableFile(idx);        // success
+  return setMixTableFile(idx, NULL);        // success
 }

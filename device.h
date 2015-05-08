@@ -11,22 +11,12 @@ typedef struct {
 	int numReadPorts;							// number of active input ports
 	int writePorts[MAX_IO];						// fd's of output ports
 	int numWritePorts;							// number of active output
-	void (*digitalRead)(int, char*);			// digital read from port id
-	void (*digitalWrite)(int, char);			// digital write from port id
+	void (*digitalRead)(int, char*);			// digital read from fd
+	void (*digitalWrite)(int, char);			// digital write from fd
+} DEVICE;
 
-	/* some ideas...
-	void (*toggleRead)(int, toggle_t*);
-	void (*toggleWrite)(int, toggle_t);
-	void (*pcmRead)(int, toggle_t*);
-	void (*pcmWrite)(int, toggle_t);
-	void (*analogRead)(int);
-	void (*analogWrite)(int, int); 
-	*/
-
-} controlDevice;
-
-// the control device
-controlDevice controlDev;
+// the control device (eventually, this would be a list)
+DEVICE controlDev;
 
 // function to init a device passed as an argument
 int initDevice(CONFIG* c);

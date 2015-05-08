@@ -5,6 +5,7 @@
 #include "sampler.h"
 #include "config.h"
 #include "audio.h"
+#include "behavior.h"
 #include "device.h"
 #include "control.h"
 
@@ -23,10 +24,10 @@ int main(int argc, char* argv[]) {
   initDevice(&c);
 
   // initialize behaviors
+  initBehavior(&c);
 
   // initialize events
-
-  // initialize responses
+  initEvents(&c);
 
   // start program, call run (in control)
   run(&c);

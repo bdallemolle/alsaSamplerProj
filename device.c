@@ -7,9 +7,9 @@
 #include "config.h"
 #include "device.h"
 // device interfaces
-// #include "commandline.h"				// not implemented yet
 #include "raspiGPIO.h"
-// #include "raspiSerial.h"				// not implemented yet
+
+/* -------------------------------------------------------------------------- */
 
 void clearControlDevice() {
 	controlDev.id = 0;										// later, for when this is a list
@@ -23,9 +23,11 @@ void clearControlDevice() {
 	return;
 }
 
+/* -------------------------------------------------------------------------- */
+
 // function to init a device passed as an argument
 int initDevice(CONFIG* c) {
-	fprintf(stderr, "*** INIT DEVICE CALLED! ***\n");
+	fprintf(stderr, " - device.c: init device called!\n");
 	// intialize control device structure will nulls
 	clearControlDevice();
 

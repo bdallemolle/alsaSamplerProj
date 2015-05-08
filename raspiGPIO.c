@@ -255,17 +255,18 @@ void readRaspiGPIO(int fd, char* val) {
 	int i = 0;
 	int gpio = -1;
 
-	for (i = 0; i < NUM_RASPI_GPIO; i++) 
+	for (i = 0; i < NUM_RASPI_GPIO; i++)
 		if (fd == raspiReadFdMap[i])
 			gpio = raspiPinMap[i];
 
-	if (i == NUM_RASPI_GPIO) {
-		fprintf(stderr, "*** ERROR READING FROM FD %d ***\n", fd);
+	if (gpio == -1) {
+		fprintf(stderr, "*** ERROR TRANSLATING FD %d ***\n", fd);
+		*val = 0;
 		return;
 	}
 
 	// get rid of this eventually
-	fprintf(stderr, "READING FD %d - GPIO %d\n", fd, gpio);
+	// fprintf(stderr, "READING FD %d - GPIO %d\n", fd, gpio);
 
 	// set read value
 	*val = (char)gpio_GETVAL(gpio);
@@ -282,7 +283,7 @@ void writeRaspiGPIO(int fd, char val) {
 	int gpio = -1;
 
 	for (i = 0; i < NUM_RASPI_GPIO; i++) 
-		if (fd == raspiReadFdMap[i])
+		if (fd == raspiWriteFdMap[i])
 			gpio = raspiPinMap[i];
 
 	if (i == NUM_RASPI_GPIO) {
@@ -316,7 +317,7 @@ int initRaspiGPIO(CONFIG* c) {
 	memset(raspiWriteFdMap, 0, sizeof(int)*NUM_RASPI_GPIO);
 
 	// set reading ports
-	for (i = 0, idx = 0; i < c->numReadPorts; i++) {
+	for (i = 0; i < c->numReadPorts; i++) {
 		// verify legal pin
 		for (j = 0; j < NUM_RASPI_GPIO; j++)
 			if (c->readMap[i] == raspiPinMap[j])
@@ -329,14 +330,13 @@ int initRaspiGPIO(CONFIG* c) {
 		else {
 			// debugging
 			if (DEVICE_INIT_DEBUG)
-				fprintf(stderr, " - setting to READ device idx %d to %d\n", idx, c->readMap[i]);
+				fprintf(stderr, " - setting to READ device idx %d to %d\n", i, c->readMap[i]);
 			// open GPIO pin
-			if ((controlDev.readPorts[idx] = gpio_OPEN(c->readMap[i])) > 0) {
+			if ((controlDev.readPorts[i] = gpio_OPEN(c->readMap[i])) > 0) {
 				controlDev.numReadPorts++;
-				raspiReadFdMap[j] = controlDev.readPorts[idx];
+				raspiReadFdMap[j] = controlDev.readPorts[i];
 				if (DEVICE_INIT_DEBUG)
-					fprintf(stderr, " * fd = %d\n", controlDev.readPorts[idx]);
-				idx++;
+					fprintf(stderr, " * fd = %d\n", controlDev.readPorts[i]);
 			}
 			else {
 				fprintf(stderr, "*** ERROR: cannot open specified GPIO pin! ***\n");

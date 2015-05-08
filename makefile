@@ -14,10 +14,18 @@ device: device.c raspiGPIO.c sampler.h device.h raspiGPIO.h
 	gcc -c raspiGPIO.c
 	gcc -c device.c
 
-main: main.c sampler.h audio.h control.h audioFile audio config control device
-	gcc audio.o audioFile.o config.o control.o device.o raspiGPIO.o main.c -o main -lasound -lpthread
+behavior: behavior.c sampler.h behavior.h 
+	gcc -c behavior.c
 
-all: main
+events: event.c sampler.h event.h 
+	gcc -c event.c
+
+main: main.c sampler.h audioFile audio config control device behavior events
+	gcc audio.o audioFile.o config.o control.o device.o behavior.o raspiGPIO.o event.o main.c -o main -lasound -lpthread
 
 clean:
 	rm *.o
+
+all: clean main
+
+

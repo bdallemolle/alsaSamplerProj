@@ -1,6 +1,4 @@
 // Macros
-#define MAX_MIX   	    16			                    // max sounds that can be mixed at ones (*** FOR NOW ***)
-#define MAX_SAMPLE      8                           // max number of samples you can use
 #define PLAYING         1                           // macro for "is playing" boolean behevior
 #define STOPPED         0                           // macro for "is stopped" boolean behevior
 #define WAV_OFFSET      44                          // size (bytes) of .wav file header 
@@ -29,6 +27,19 @@ typedef struct {
   int fileSizeBytes;                  // size of audio data in bytes
 } AudioFile;
 
+// the abstract concept of a samples
+typedef struct {
+  int id;                             // sample id
+  int audioIdx;                       // index into audio table
+  int mixIdx;                         // index into mix table
+  int playbackState;                  // playing/stopped state
+  int overlay;                        // toggle for overlayed sample
+  int numOverlays;                    // number of overlaid copies of sample playing
+  bool loop;                          // toggle if the sample is on loop or not 
+  void (*digitalBehavior)(int);       // digital behavior function associated with sample
+  // void (*analogBehavior)(double);  // 
+} Sample;
+
 /* AudioLink object
  * - links to a playable audio file for mixing and playback
  * - keeps info about playback indices 
@@ -43,18 +54,8 @@ typedef struct {
   int lastSubFrame;                   // number 
   int lastSubSampleIdx;               // index of last sub sample (sub frame)
   int blackSpot;                      // marked for death (stop)
+  Sample* s;                          // sample corresponding with a playback sound
 } AudioLink;
-
-typedef struct {
-  int id;                             // sample id
-  int audioIdx;                       // index into audio table
-  int mixIdx;                         // index into mix table
-  int playbackState;                  // playing/stopped state
-  int overlay;                        // toggle for overlayed sample
-  int numOverlays;                    // number of overlaid copies of sample playing 
-  void (*digitalBehavior)(int);       // digital behavior function associated with sample
-  // void (*analogBehavior)(double);  // 
-} Sample;
 
 AudioFile audioTable[MAX_AUDIO_FILES];    // the audio file table
 AudioLink mixTable[MAX_MIX];              // the mix table
@@ -65,7 +66,8 @@ int initAudio(CONFIG* c);                                         // init audio 
 int startAudio();                                                 // starts playback loop/thread
 int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME],      // sets the audio table with provided audio files
                   int nFiles);                            
-int setSampleTable();                                             // set the sample table mapping
+int setSampleTable(char filenames[MAX_AUDIO_FILES][MAX_NAME],     // set the sample table mapping
+                   int sampleMap[MAX_SAMPLE]);                                             
 
 // Exit functions 
 int exitAudio();                          // exits audio device
@@ -77,6 +79,7 @@ void clearSampleTable();                  // clears sample table
 int sampleStart(int sampleID);            // starts a sample
 int sampleStop(int sampleID);             // stops a sample
 int sampleRestart(int sampleID);          // restarts a sample
+int sampleStartLoop(int sampleID);        // starts a sample loop
 int sampleOverlay(int sampleID);          // plays a sample over itself (mix table limit providing...)
 int sampleStopALL();                      // stops all sample playback
 

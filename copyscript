@@ -18,10 +18,14 @@ cp makefile demo5
 cp audioFile.c demo5
 cp audio.c demo5
 cp audio.h demo5
+cp behavior.c demo5
+cp behavior.h demo5
 cp control.c demo5
 cp control.h demo5
 cp config.c demo5
 cp config.h demo5
+cp event.h demo5
+cp event.c demo5
 cp device.h demo5
 cp device.c demo5
 cp raspiGPIO.c demo5
