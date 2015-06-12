@@ -6,15 +6,5 @@
 #define GPIO_DEMO2			4						// gpio (2) pin id for demo
 #define GPIO_DEBUG			1 						// gpio debugging flag
 
-/* typedef struct {
-	int pinID;
-	int direction;
-	int fd;					// ???		
-	void (*behavior)(int);
-} raspiGPIOpin;
-
-raspiGPIOpin pinsGPIO[17];
-*/
-
 int initRaspiGPIO(CONFIG* c);
 int closeRaspiGPIO();

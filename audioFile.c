@@ -38,7 +38,7 @@ int readWAV(AudioFile* a) {
 
   // debugging
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "\n*** READING WAV FILE HEADER ***\n");
+    fprintf(stderr, "*** READING WAV FILE HEADER ***\n");
 
   // copy header
   memcpy(buf, a->addr, WAV_OFFSET); 

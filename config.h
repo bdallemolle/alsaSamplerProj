@@ -4,7 +4,7 @@ typedef struct {
 	char audioInputDevice[MAX_NAME];					// audio input device name - NO USE YET
 	char audioFiles[MAX_AUDIO_FILES][MAX_NAME];			// list of audio files for program
 	int numAudioFiles;									// number of audio files in configuration
-	int sampleMap[MAX_SAMPLE];							// 
+	int sampleMap[MAX_SAMPLE];							// maps audio files to their samples
 	int controlDevID;									// ID of control device for I/O
 	int readMap[MAX_IO];								// maps io 'port' to a read/write functionality
 	int behavior[MAX_IO];								// behaviors, mapping to the indices of input control ports

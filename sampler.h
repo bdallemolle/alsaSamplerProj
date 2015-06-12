@@ -14,7 +14,7 @@
 
 /*** temporary #defines for demo ***/
 #define OUTPUT_DEV 	    "sysdefault:CARD=CODEC" 	  // playback device name
-#define LIGHT			(MAX_IO - 1)
+#define LIGHT			23
 int light_fd;
 /*** get rid of these eventually! ***/
 
@@ -28,4 +28,5 @@ typedef enum {TRUE = 1, FALSE = 0} bool;
 int AUDIO_INIT_DEBUG;            // debugging messages regarding audio object initialization
 int AUDIO_PLAY_DEBUG;            // debugging messages regarding audio playback
 int DEVICE_INIT_DEBUG;			 // debugging messages for device initialization
+int GENERAL_DEBUG;				 // general debugging messages
 

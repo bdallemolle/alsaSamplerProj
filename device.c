@@ -34,15 +34,15 @@ int initDevice(CONFIG* c) {
 	// go through list of devices
 	switch (c->controlDevID) {
 		case COMMANDLINE:
-			fprintf(stderr, " - DEVICE.c => calling init commandline (NOT IMPLEMENTED)\n");
+			fprintf(stderr, " - DEVICE.c: calling init commandline (NOT IMPLEMENTED)\n");
 			// initCommandlineDevice(c);
 			break;
 		case RASPI_GPIO:
-			fprintf(stderr, " - DEVICE.c => calling init raspi GPIO (IN PROGRESS)\n");
+			fprintf(stderr, " - DEVICE.c: calling init raspi GPIO \n");
 			initRaspiGPIO(c);
 			break;
 		case RASPI_SERIAL:
-			fprintf(stderr, " - DEVICE.c => calling init raspi serial (NOT IMPLEMENTED)\n");
+			fprintf(stderr, " - DEVICE.c: calling init raspi serial (NOT IMPLEMENTED)\n");
 			// initRaspiSerial(c);
 			break;
 		default: 
@@ -51,7 +51,7 @@ int initDevice(CONFIG* c) {
 	}
 
 	// set up sampler device!!!
-	fprintf(stderr, "*** SHOULD SET UP SAMPLER LISTENING PORTS HERE! ***\n");
+	// fprintf(stderr, "*** SHOULD SET UP SAMPLER LISTENING PORTS HERE! ***\n");
 
 	return;
 }

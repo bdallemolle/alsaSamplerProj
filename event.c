@@ -9,13 +9,12 @@
 #include "audio.h"
 #include "event.h"
 
-int lightState = 0;
+int lightState = 1;
 
 /* -------------------------------------------------------------------------- */
 
 void clearEvents() {
 	int i = 0;
-
 	for (i = 0; i < MAX_IO; i++) {
 		e.event[i] = NULL;
 		e.args[i] = -1;
@@ -26,7 +25,8 @@ void clearEvents() {
 /* -------------------------------------------------------------------------- */
 
 int playSampleBlock(int idx) {
-	fprintf(stderr, " - PLAY SAMPLE EVENT CALLED\n");
+	if (GENERAL_DEBUG)
+		fprintf(stderr, " - PLAY SAMPLE EVENT CALLED\n");
 	sampleStart(e.args[idx]);
 	return 1;
 }
@@ -34,14 +34,12 @@ int playSampleBlock(int idx) {
 /* -------------------------------------------------------------------------- */
 
 int playSampleWithStop(int idx) {
-	fprintf(stderr, " - PLAY SAMPLE WITH STOP EVENT CALLED\n");
+	if (GENERAL_DEBUG)
+		fprintf(stderr, " - PLAY SAMPLE WITH STOP EVENT CALLED\n");
 
-	if (sampleTable[e.args[idx]].playbackState == STOPPED) {
+	if (sampleTable[e.args[idx]].playbackState == STOPPED)
 		sampleStart(e.args[idx]);
-	}
-	else {
-		sampleStop(e.args[idx]);
-	}
+	else sampleStop(e.args[idx]);
 
 	return 1;
 }
@@ -49,7 +47,8 @@ int playSampleWithStop(int idx) {
 /* -------------------------------------------------------------------------- */
 
 int playSampleLoopWithStop(int idx) {
-	fprintf(stderr, " - PLAY SAMPLE *LOOP* WITH STOP EVENT CALLED\n");
+	if (GENERAL_DEBUG)
+		fprintf(stderr, " - PLAY SAMPLE *LOOP* WITH STOP EVENT CALLED\n");
 
 	if (sampleTable[e.args[idx]].playbackState == STOPPED) {
 		sampleStartLoop(e.args[idx]);
@@ -64,7 +63,8 @@ int playSampleLoopWithStop(int idx) {
 /* -------------------------------------------------------------------------- */
 
 int oneHitSample(int idx) {
-	fprintf(stderr, " - ONE HIT SAMPLE EVENT CALLED\n");
+	if (GENERAL_DEBUG)
+		fprintf(stderr, " - ONE HIT SAMPLE EVENT CALLED\n");
 	sampleRestart(e.args[idx]);
 	return 1;
 }
@@ -100,18 +100,28 @@ int initEvents(CONFIG* c) {
 	// set events
 	for (i = 0; i < c->numReadPorts; i++) {
 		if (c->event[i] == 1) {
-			e.event[i] = &playSampleLoopWithStop;
+			e.event[i] = &oneHitSample;
 			e.args[i] = c->sampleMap[i];
 		}
 		else if (c->event[i] == 2) {
-			e.event[i] = &oneHitSample;
+			e.event[i] = &playSampleBlock;
+			e.args[i] = c->sampleMap[i];
+		}
+		else if (c->event[i] == 3) {
+			e.event[i] = &playSampleWithStop;
+			e.args[i] = c->sampleMap[i];
+		}
+		else if (c->event[i] == 4) {
+			e.event[i] = &playSampleLoopWithStop;
 			e.args[i] = c->sampleMap[i];
 		}
 	}
 
 	/* SET LIGHT BEHAVIOR! */
+	fprintf(stderr, " - event.c: setting light event!\n");
 	e.event[LIGHT] = &lightDemoToggle;
-	e.args[LIGHT] = 1;
+	e.args[LIGHT] = 0;
+	// e.event[LIGHT](0);
 
     return 1;
 }

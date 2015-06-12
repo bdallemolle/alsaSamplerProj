@@ -288,12 +288,9 @@ void writeRaspiGPIO(int fd, char val) {
 		return;
 	}
 
-	// get rid of this eventually
-	fprintf(stderr, "WRITING FD %d - GPIO %d\n", fd, gpio);
-
 	// set read value
-	if (gpio_SETVAL(gpio, (int)val) <= 0) 
-		fprintf(stderr, "*** ERROR SETTING GPIO %d\n", gpio);
+	if (gpio_SETVAL(gpio, (int)val) < 0) 
+		fprintf(stderr, "*** ERROR SETTING GPIO *** %d\n", gpio);
 
 	return;
 }

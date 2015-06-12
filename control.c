@@ -18,10 +18,33 @@
 #include "event.h"
 #include "audio.h"
 
+// -------------------------------------------------------------------------- //
 
-/* -------------------------------------------------------------------------- */
+// a function to remove once their are virtual devices
+void hackyCommandLineParse(bool *isDone)
+{
+  char buf[MAX_NAME];         // stdin input buffer
 
-int setPollTable(struct pollfd fdset[], int* nfds) {
+  fgets(buf, 80, stdin);
+  // quick, hacky parse for exiting only
+  if (strcmp("-q\n", buf) == 0) 
+  {
+    *isDone = 1;
+    // should kill sound here
+    fprintf(stdout, "Exiting program...\n");
+  }
+  else 
+  {
+    fprintf(stdout, "Error reading STDIN input...\n");
+  }
+
+  return;
+}
+
+// -------------------------------------------------------------------------- //
+
+int setPollTable(struct pollfd fdset[], int* nfds) 
+{
   int i = 0;
 
   fprintf(stderr, " - control.c: setting poll fd table...\n");
@@ -44,25 +67,27 @@ int setPollTable(struct pollfd fdset[], int* nfds) {
   return 1;
 }
 
-/* -------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------- //
 
-int run(CONFIG* c) {
+int run(CONFIG* c) 
+{
   struct pollfd fdset[MAX_IO+1];      // poll file descriptor set
   int nfds = 0;                       // 
   int timeout = POLL_TIMEOUT;         // poll timeout time                  
-  char buf[MAX_NAME];                 // stdin input buffer
   bool isDone = FALSE;                // boolean loop toggle
   int retval = -1;                    // 
   char val;                           //
   int i = 0;                          // loop index variables
 
-	fprintf(stderr, "*** RUN CALLED! DO \"CONTROL\" STUFF ***\n");
+	fprintf(stderr, "*** SAMPLER RUNNING! ***\n");
 
   // set file desciptor tables for polling
   setPollTable(fdset, &nfds);
 
   // a bad hack for avoiding initial overruns
   fprintf(stderr, "Waiting...\n");
+  sleep(1);
+  fprintf(stderr, "...\n");
   sleep(1);
   fprintf(stderr, "DONE!\n");
 
@@ -75,22 +100,12 @@ int run(CONFIG* c) {
 
     // check select values
     if (retval == -1) {
-      fprintf(stderr, "*** POLL ERROR! ***\n");
+      fprintf(stderr, "*** ERROR: poll failed! ***\n");
       isDone = 1;
     }
     else if (retval) {
       if (fdset[0].revents & POLLIN) {
-        fprintf(stderr, "INPUT FRON STDIN!\n");
-        fgets(buf, 80, stdin);
-        // quick, hacky parse for exiting only
-        if (strcmp("-q\n", buf) == 0) {
-          isDone = 1;
-          // should kill sound here
-          fprintf(stdout, "Exiting program...\n");
-        }
-        else {
-          fprintf(stdout, "Error reading STDIN input...\n");
-        }
+        hackyCommandLineParse(&isDone);
       }
       for (i = 1; i < nfds; i++) {
         if (fdset[i].revents & POLLIN) {
@@ -106,7 +121,8 @@ int run(CONFIG* c) {
       e.event[LIGHT](b.behavior[LIGHT](LIGHT, val));
     }
     else {
-      fprintf(stderr, " - POLL TIMEOUT...\n");
+      if (GENERAL_DEBUG)
+        fprintf(stderr, " - POLL TIMEOUT...\n");
     }
   }
 

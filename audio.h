@@ -54,6 +54,7 @@ typedef struct {
   int lastSubFrame;                   // number 
   int lastSubSampleIdx;               // index of last sub sample (sub frame)
   int blackSpot;                      // marked for death (stop)
+  int sampleStop;                     // tell sample to say its stopped
   Sample* s;                          // sample corresponding with a playback sound
 } AudioLink;
 

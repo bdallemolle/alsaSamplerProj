@@ -13,21 +13,23 @@
 #include "sampler.h"
 #include "config.h"
 #include "audio.h"
-#include "audioFile.h"
 
 /* AUDIO DEVICE VARIABLES */
 char output_dev[MAX_NAME];                    // name of output device
-snd_pcm_t* output_handle = NULL;              // output device handle (ALSA)
+snd_pcm_t* output_handle = NULL;       // output device handle (ALSA)
 char input_dev[MAX_NAME];                     // name of input device
-snd_pcm_t* input_handle = NULL;               // input device handle (ALSA)
+snd_pcm_t* input_handle = NULL;        // input device handle (ALSA)
 
 /* CONCURRANT CONTROL VARIABLES */
 pthread_t PLAYBACK_THREAD = -1;               // playback thread id 
 pthread_mutex_t mix_lock;                     // mix table lock
-pthread_mutex_t exit_lock;                    // exit (playback thread) toggle lock
-unsigned int EXIT_PLAYER;                     // playback loop exit toggle
 
-/* -------------------------------------------------------------------------- */
+pthread_mutex_t exit_lock;                    // exit (playback thread) toggle lock
+unsigned int EXIT_PLAYER = 0;          // playback loop exit toggle
+
+// -------------------------------------------------------------------------- //
+// ------------------------ MIX TABLE FUNCTIONS ----------------------------- //
+// -------------------------------------------------------------------------- //
 
 // clears/zero-outs an entry in the mix table
 void clearMixTableEnt(int i) {
@@ -39,11 +41,12 @@ void clearMixTableEnt(int i) {
    mixTable[i].lastSubFrame = 0;
    mixTable[i].lastSubSampleIdx = 0;
    mixTable[i].blackSpot = 0;
+   mixTable[i].sampleStop = 0;
    mixTable[i].s = NULL;
    return;
 }
 
-/* -------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------- //
 
 // clears/zero-outs an entry in the mix table
 void clearMixTable() {
@@ -53,39 +56,20 @@ void clearMixTable() {
    return;
 }
 
-/* -------------------------------------------------------------------------- */
-
-// function to init/zero-out mix table
-int initMixTable() {
-  clearMixTable();
-
-  // init mix table locks!
-  if (pthread_mutex_init(&mix_lock, NULL) < 0) {
-    fprintf(stderr, "*** Error initializing mix table lock ***\n");
-    return -1;
-  } else if (AUDIO_INIT_DEBUG) {
-    fprintf(stderr, "mix table lock initialized succesfully...\n");
-  }
-  
-  return 1;	// success
-}
-
-/* -------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------- //
 
 int setMixTableFile(int audioFileIdx, Sample* sample) {
-  int openMixIdx = -1;
+  int openMixIdx = -1;                      // index of an open mix table slot
 
   if (AUDIO_PLAY_DEBUG) 
     fprintf(stderr, "Setting audio file table %d to PLAY\n", audioFileIdx);  
 
-  // lock stuff would be here
-  pthread_mutex_lock(&mix_lock);
+  pthread_mutex_lock(&mix_lock);            // lock mix table
 
   // loop through table, find open table entry
   int i = 0;
   while (i < MAX_MIX) {
     if (mixTable[i].addr == NULL) {
-      // valid entry
       openMixIdx = i;
       break;
     }    
@@ -95,7 +79,7 @@ int setMixTableFile(int audioFileIdx, Sample* sample) {
   // check that an entry was found
   if (openMixIdx < 0) {
     fprintf(stderr, "*** ERROR: OUT OF MIX TABLE ENTRIES! NO NEW SAMPLE PLAYBACK ***\n");
-    pthread_mutex_unlock(&mix_lock);
+    pthread_mutex_unlock(&mix_lock);        // unlock mix table
     return -1;
   }
 
@@ -107,22 +91,41 @@ int setMixTableFile(int audioFileIdx, Sample* sample) {
                                           - (mixTable[openMixIdx].nFrames * FRAME_SIZE));
   mixTable[openMixIdx].s = sample;
   
-  // print debugging
-  fprintf(stderr, "%d last frame sub sample idx\n", mixTable[openMixIdx].lastSubSampleIdx);
-  fprintf(stderr, "NUM SAMPLES = %d, FRAME SIZE = %d\n", audioTable[audioFileIdx].audioSizeSamples, FRAME_SIZE);
-  fprintf(stderr, "%d frames in sample\n", mixTable[openMixIdx].nFrames);  
-  fprintf(stderr, "audio table size samples = %d\n", audioTable[audioFileIdx].audioSizeSamples);
-  fprintf(stderr, "%d last frame idx\n", mixTable[openMixIdx].lastIdx);
-  if (mixTable[openMixIdx].s != NULL)
-    fprintf(stderr, "sample id = %d\n", mixTable[openMixIdx].s->id);
+  if (AUDIO_PLAY_DEBUG) {
+    fprintf(stderr, "%d last frame sub sample idx\n", mixTable[openMixIdx].lastSubSampleIdx);
+    fprintf(stderr, "NUM SAMPLES = %d, FRAME SIZE = %d\n", audioTable[audioFileIdx].audioSizeSamples, FRAME_SIZE);
+    fprintf(stderr, "%d frames in sample\n", mixTable[openMixIdx].nFrames);  
+    fprintf(stderr, "audio table size samples = %d\n", audioTable[audioFileIdx].audioSizeSamples);
+    fprintf(stderr, "%d last frame idx\n", mixTable[openMixIdx].lastIdx);
+    if (mixTable[openMixIdx].s != NULL)
+      fprintf(stderr, "sample id = %d\n", mixTable[openMixIdx].s->id);
+  }
 
-  // release mix table lock
-  pthread_mutex_unlock(&mix_lock);
+  pthread_mutex_unlock(&mix_lock);            // unlock mix table
 
   return openMixIdx;	// success
 }
+
+// -------------------------------------------------------------------------- //
+
+// function to init/zero-out mix table
+int initMixTable() {
+  clearMixTable();
+
+  // init mix table locks!
+  if (pthread_mutex_init(&mix_lock, NULL) < 0) {
+    fprintf(stderr, "*** Error initializing mix table lock ***\n");
+    return -1;
+  } else if (AUDIO_INIT_DEBUG) {
+    fprintf(stderr, " - mix table lock initialized succesfully...\n");
+  }
+  
+  return 1;   // success
+}
  
-/* -------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------- //
+// ------------------------ AUDIO TABLE  FUNCTIONS -------------------------- //
+// -------------------------------------------------------------------------- //
 
 // clears/zero-outs an entry in the mix table
 void clearAudioTableEnt(int i) {
@@ -141,7 +144,7 @@ void clearAudioTableEnt(int i) {
   return;
 }
 
-/* -------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------- //
 
 // clears/zero-outs an entry in the mix table
 void clearAudioTable() {
@@ -193,14 +196,44 @@ int initAudioTable() {
   return 1; 
 }
 
-/* -------------------------------------------------------------------------- */
+// -------------------------------------------------------------------------- //
+// --------------------------- MIXING FUNCTION ------------------------------ //
+// -------------------------------------------------------------------------- //
+
+int sumBuffer(SAMPLE_TYPE buf[], int limitLo, int limitHi, 
+              int bufStartIdx, int mixTableIdx) 
+{
+  int i = mixTableIdx;
+  int j = limitLo;
+  int k = bufStartIdx;
+
+  // copy all valid samples
+  for ( ; j < limitHi; j++, k++) {
+    // check for clipping (a BASIC hard-limiter)
+    if (buf[k] + mixTable[i].addr[j] > POS_CLIP) {
+      if (AUDIO_PLAY_DEBUG)
+        fprintf(stderr, "[%d][%d] POSITIVE CLIP (%d) !\n", i, j, buf[k] + mixTable[i].addr[j]);
+      buf[k] = POS_CLIP; 
+    }
+    else if (buf[k] + mixTable[i].addr[j] < NEG_CLIP) {
+      if (AUDIO_PLAY_DEBUG) 
+        fprintf(stderr, "[%d][%d] NEGATIVE CLIP (%d) !\n", i, j, buf[k] + mixTable[i].addr[j]);
+      buf[k] = NEG_CLIP;
+    }
+    else buf[k] += mixTable[i].addr[j];
+  }
+
+  return 1;
+}
+
+// -------------------------------------------------------------------------- //
 
 // combine all samples from each item in sound table
 int mix(SAMPLE_TYPE buf[]) {
-  int i, j, k; 
-  int sampleLimitHi;
-  int sampleLimitLo;
-  int lastIdx;  
+  int sampleIdxHi = 0;
+  int sampleIdxLo = 0;
+  int lastIdx = 0;  
+  int i = 0;
    
   // LOCK MIX TABLE  
   pthread_mutex_lock(&mix_lock); 
@@ -212,36 +245,23 @@ int mix(SAMPLE_TYPE buf[]) {
       continue;       
 
     lastIdx = 0;
+
     // check if final frame of audio file
     if (mixTable[i].idx == mixTable[i].lastIdx) {
-      sampleLimitLo = FRAME_SIZE * mixTable[i].lastIdx;
-      sampleLimitHi = sampleLimitLo + mixTable[i].lastSubSampleIdx;
+      sampleIdxLo = FRAME_SIZE * mixTable[i].lastIdx;
+      sampleIdxHi = sampleIdxLo + mixTable[i].lastSubSampleIdx;
       lastIdx = 1;
     }
     else { 
-      sampleLimitHi = FRAME_SIZE * (mixTable[i].idx + 1);
-      sampleLimitLo = FRAME_SIZE * mixTable[i].idx;
+      sampleIdxHi = FRAME_SIZE * (mixTable[i].idx + 1);
+      sampleIdxLo = FRAME_SIZE * mixTable[i].idx;
     }
 
-    // copy all valid samples
-    for (j = sampleLimitLo, k = 0; j < sampleLimitHi; j++, k++) {
-      // check for clipping (a SUPER basic hard-limiter)
-      if (buf[k] + mixTable[i].addr[j] > POS_CLIP) {
-        if (AUDIO_PLAY_DEBUG)
-          fprintf(stderr, "[%d][%d] POSITIVE CLIP (%d) !\n", i, j, buf[k] + mixTable[i].addr[j]);
-        buf[k] = POS_CLIP; 
-      }
-      else if (buf[k] + mixTable[i].addr[j] < NEG_CLIP) {
-        if (AUDIO_PLAY_DEBUG) 
-          fprintf(stderr, "[%d][%d] NEGATIVE CLIP (%d) !\n", i, j, buf[k] + mixTable[i].addr[j]);
-        buf[k] = NEG_CLIP;
-      }
-      else buf[k] += mixTable[i].addr[j];
-    }
+    sumBuffer(buf, sampleIdxLo, sampleIdxHi, 0, i);
 
     if (lastIdx && mixTable[i].s->loop) {
       mixTable[i].idx = 0;
-      i--;
+      i--;                        // hack, change this
     }
     else if (lastIdx) {
       // set sample to NOT playing
@@ -249,7 +269,11 @@ int mix(SAMPLE_TYPE buf[]) {
       clearMixTableEnt(i);
     }
     else if (mixTable[i].blackSpot) {
-      mixTable[i].s->playbackState = STOPPED;
+      // call stop callback
+
+      // if last iter, check if sample is to be marked as STOPPED
+      if (mixTable[i].sampleStop)
+        mixTable[i].s->playbackState = STOPPED;
       clearMixTableEnt(i);
     }
     else {
@@ -292,7 +316,7 @@ int initOutputDevice() {
   }
   
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "parameters set for output device\n");
+    fprintf(stderr, " - parameters set for output device\n");
 
   return 1;
 }
@@ -393,8 +417,6 @@ int initAudio(CONFIG* c) {
     return -1;
   }
 
-  /************* set up audio table and mix table! *************/
-
   // open audio files
   setAudioTable(c->audioFiles, c->numAudioFiles);
 
@@ -430,6 +452,9 @@ int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
     return -1;
   }
 
+  if (AUDIO_INIT_DEBUG) 
+    fprintf(stderr, "\n*** --------- OPENING AUDIO FILES --------- ***\n");
+
   // open all files
   for (i = 0; i < nFiles; i++) {
     addAudioFile(filenames[i], audioTable, i);        // change this to audio table + index
@@ -451,6 +476,9 @@ int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
       i++;
     }
   }  
+
+  if (AUDIO_INIT_DEBUG) 
+    fprintf(stderr, "\n*** ------ DONE OPENING AUDIO FILES ------ ***\n");
 
   return 1; 
 }
@@ -540,6 +568,7 @@ int sampleStop(int sampleID) {
 
   pthread_mutex_lock(&mix_lock);
   mixTable[sampleTable[sampleID].mixIdx].blackSpot = 1;
+  mixTable[sampleTable[sampleID].mixIdx].sampleStop = 1;
   pthread_mutex_unlock(&mix_lock);
 
   return 1;
@@ -555,7 +584,12 @@ int sampleRestart(int sampleID) {
     sampleStart(sampleID);
   }
   else {
-    sampleStop(sampleID);
+    // stop currently playing sample
+    pthread_mutex_lock(&mix_lock);
+    mixTable[sampleTable[sampleID].mixIdx].blackSpot = 1;
+    mixTable[sampleTable[sampleID].mixIdx].sampleStop = 0;
+    pthread_mutex_unlock(&mix_lock);
+    // set new sample to start
     sampleTable[sampleID].mixIdx = setMixTableFile(sampleTable[sampleID].audioIdx, &sampleTable[sampleID]);
     sampleTable[sampleID].playbackState = PLAYING;
   }
@@ -591,7 +625,7 @@ int sampleStartLoop(int sampleID) {
 
 int sampleOverlay(int sampleID) {
   if (AUDIO_PLAY_DEBUG)
-    fprintf(stderr, " - Sample %d told to play OVERLAID!\n");
+    fprintf(stderr, " - Sample %d told to play OVERLAID!\n", sampleID);
   // get file num for sample ID
 
   // set mix table playback

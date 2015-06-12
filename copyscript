@@ -1,40 +1,41 @@
 #!/bin/bash
 
-# remove all .c and .h files in demo5 folder
-rm demo5/*.c
-rm demo5/*.h
+# set variables
 
-# list of .c files to copy
-# CFILES="audio.c","audioFile.c"
+pipath=pi@192.168.2.2:/home/pi
 
-# list of .h files to copy
-# HFILES={sampler.h,audio.h,control.h,device.h}
+src="audio.c 
+audioFile.c
+audio.h
+behavior.c
+behavior.h
+config.c
+config.h 
+control.c 
+control.h
+device.c
+device.h
+event.c
+event.h
+main.c
+raspiGPIO.c
+raspiGPIO.h
+sampler.h"
 
-# copy files to demo5
-# cp ($CFILES) demo5
-# cp ${HFILES} demo5
+# make directories
 
-cp makefile demo5
-cp audioFile.c demo5
-cp audio.c demo5
-cp audio.h demo5
-cp behavior.c demo5
-cp behavior.h demo5
-cp control.c demo5
-cp control.h demo5
-cp config.c demo5
-cp config.h demo5
-cp event.h demo5
-cp event.c demo5
-cp device.h demo5
-cp device.c demo5
-cp raspiGPIO.c demo5
-cp raspiGPIO.h demo5
-# cp parse.c demo5
-# cp parse.h demo5
-cp sampler.h demo5
-cp main.c demo5
-cp makefile demo5
+mkdir alsaproj
 
-# copy files to raspi
-scp -r demo5 pi@192.168.2.2:/home/pi/alsatest
+# fill directories
+
+for i in $src
+do
+  echo Copying "$i" to alsaproj
+  cp "$i" alsaproj
+done
+
+cp makefile alsaproj
+
+# copy to pi
+
+scp -r alsaproj $pipath

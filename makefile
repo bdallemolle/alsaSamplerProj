@@ -1,31 +1,41 @@
-audioFile: audioFile.c sampler.h audio.h 
-	gcc -c audioFile.c -lasound -lpthread
+# makefile for ALSA SAMPLER PROJECT
+# by Bryan Dalle Molle
 
-audio: audio.c sampler.h audio.h audioFile
-	gcc -c audio.c -lasound -lpthread
+CC = gcc
+DEBUG = -DAUDIOINITDEBUG -DAUDIOPLAYDEBUG -DEVICEINITDEBUG
+FLAGS = -g -Wall -lasound -lpthread $(DEBUG)
+OBJ = audio.o audioFile.o behavior.o config.o control.o device.o event.o raspiGPIO.o
 
-config: config.c sampler.h config.h
-	gcc -c config.c
+audio.o: audio.c audio.h
+	$(CC) $(FLAGS) -c audio.c 
 
-control: control.c sampler.h control.h 
-	gcc -c control.c -lpthread
+audioFile.o: audioFile.c audio.h 
+	$(CC) $(FLAGS) -c audioFile.c 
 
-device: device.c raspiGPIO.c sampler.h device.h raspiGPIO.h
-	gcc -c raspiGPIO.c
-	gcc -c device.c
+config.o: config.c config.h
+	$(CC) $(FLAGS) -c config.c
 
-behavior: behavior.c sampler.h behavior.h 
-	gcc -c behavior.c
+control.o: control.c control.h 
+	$(CC) $(FLAGS) -c control.c 
 
-events: event.c sampler.h event.h 
-	gcc -c event.c
+raspiGPIO.o: raspiGPIO.c raspiGPIO.h
+	$(CC) $(FLAGS) -c raspiGPIO.c
 
-main: main.c sampler.h audioFile audio config control device behavior events
-	gcc audio.o audioFile.o config.o control.o device.o behavior.o raspiGPIO.o event.o main.c -o main -lasound -lpthread
+device.o: device.c device.h
+	$(CC) $(FLAGS) -c device.c
+
+behavior.o: behavior.c behavior.h 
+	$(CC) $(FLAGS) -c behavior.c
+
+event.o: event.c event.h 
+	$(CC) $(FLAGS) -c event.c
+
+main: main.c sampler.h $(OBJ)
+	$(CC) $(FLAGS) $(OBJ) main.c -o main 
 
 clean:
-	rm *.o
+	rm *.o main
 
-all: clean main
+all: main
 
 

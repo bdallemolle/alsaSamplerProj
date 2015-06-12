@@ -34,7 +34,6 @@ int main(int argc, char* argv[]) {
 
   // cleanup
   exitAudio();
-  // other cleanup routines?
 
   return 0;
 }

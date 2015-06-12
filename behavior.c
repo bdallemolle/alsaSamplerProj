@@ -63,11 +63,10 @@ int lightDemo(int j, int val) {
 	int i = 0;
 	// fprintf(stderr, "*** LIGHT DEMO CALLED ***\n");
 
-	for (i = 0; i < MAX_SAMPLE; i++) {
-		if (sampleTable[i].playbackState == PLAYING) {
+	for (i = 0; i < MAX_SAMPLE; i++)
+		if (sampleTable[i].playbackState == PLAYING)
 			return 1;
-		}
-	}
+
 	return 0;
 }
 
@@ -92,6 +91,7 @@ int initBehavior(CONFIG* c) {
 	}
 
 	/* SET LIGHT BEHAVIOR! */
+	fprintf(stderr, " - behavior.c: setting light behavior!\n");
 	b.behavior[LIGHT] = &lightDemo;
 
     return 0;
