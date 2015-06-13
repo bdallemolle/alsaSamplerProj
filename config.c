@@ -76,13 +76,13 @@ int config(CONFIG* c) {
 
 	// configure button 1
 	c->sampleMap[0] = 0;							// set sample maps...
-	c->event[0] = 3;								// EVENT 1 
+	c->event[0] = 4;								// EVENT 1 
 	c->readMap[0] = 4;								// set raspi pin 4
 	c->behavior[0] = 2;								// BEHAVE 1 == DOWN PRESS BUTTON
 
 	// configutre button 2
 	c->sampleMap[1] = 1;							// ... 
-	c->event[1] = 2;								// EVENT 2 
+	c->event[1] = 1;								// EVENT 2 
 	c->readMap[1] = 17;								// set raspi pin 17
 	c->behavior[1] = 1;								// BEHAVE 2 == UP PRESS BUTTON
 	

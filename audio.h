@@ -14,6 +14,10 @@
 typedef short SAMPLE_TYPE;                          // size of 16-bit PCM audio
 typedef short* SAMPLE_PTR;                          // pointer to 16-bit PCM audio data
 
+// audio locking mechanisms
+pthread_mutex_t mix_lock;                     // mix table lock - PUT INSIDE audioMix.c
+pthread_mutex_t exit_lock;                    // exit (playback thread) toggle lock - PUT INSIDE audioControl.c
+
 // An audio file
 typedef struct {
   int fd;			                        // file descriptor
@@ -35,9 +39,11 @@ typedef struct {
   int playbackState;                  // playing/stopped state
   int overlay;                        // toggle for overlayed sample
   int numOverlays;                    // number of overlaid copies of sample playing
-  bool loop;                          // toggle if the sample is on loop or not 
-  void (*digitalBehavior)(int);       // digital behavior function associated with sample
-  // void (*analogBehavior)(double);  // 
+  bool loop;                          // toggle if the sample is on loop or not
+  unsigned int loopCount;             // number of times this sample has looped
+  unsigned int numLoops;              // number of times this sample should loop
+  void (*digitalBehavior)(int);       // digital behavior function associated with sample (callback)
+  // void (*analogBehavior)(double);  // analog behavior associated with sample (callback)
 } Sample;
 
 /* AudioLink object
@@ -48,45 +54,47 @@ typedef struct {
 typedef struct {
   SAMPLE_PTR addr;                    // pointer to audio in memory
   AudioFile* file;                    // pointer to parent file structure
-  int idx;                            // current copy over index
-  int lastIdx;                        // last index of addr*
+  int iterIdx;                        // current position in an audio file iterator
   int nFrames;                        // number of frames
-  int lastSubFrame;                   // number 
-  int lastSubSampleIdx;               // index of last sub sample (sub frame)
+  int lastSampleIdx;                  // the index of the last sample of the audio file
   int blackSpot;                      // marked for death (stop)
   int sampleStop;                     // tell sample to say its stopped
   Sample* s;                          // sample corresponding with a playback sound
 } AudioLink;
 
-AudioFile audioTable[MAX_AUDIO_FILES];    // the audio file table
-AudioLink mixTable[MAX_MIX];              // the mix table
-Sample sampleTable[MAX_SAMPLE];           // the sample table 
+AudioFile audioTable[MAX_AUDIO_FILES];                            // the audio file table
+AudioLink mixTable[MAX_MIX];                                      // the mix table
+Sample sampleTable[MAX_SAMPLE];                                   // the sample table 
 
 // Initialization functions
 int initAudio(CONFIG* c);                                         // init audio device
 int startAudio();                                                 // starts playback loop/thread
 int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME],      // sets the audio table with provided audio files
-                  int nFiles);                            
-int setSampleTable(char filenames[MAX_AUDIO_FILES][MAX_NAME],     // set the sample table mapping
-                   int sampleMap[MAX_SAMPLE]);                                             
+                  int nFiles);                                                                       
 
 // Exit functions 
-int exitAudio();                          // exits audio device
-int killAudio();                          // kills playback loop/thread
-void clearAudioTable();                   // clears audio table
-void clearSampleTable();                  // clears sample table
+int exitAudio();                                                  // exits audio device
+int killAudio();                                                  // kills playback loop/thread
+void clearAudioTable();                                           // clears audio table
 
-// Sample functions
-int sampleStart(int sampleID);            // starts a sample
-int sampleStop(int sampleID);             // stops a sample
-int sampleRestart(int sampleID);          // restarts a sample
-int sampleStartLoop(int sampleID);        // starts a sample loop
-int sampleOverlay(int sampleID);          // plays a sample over itself (mix table limit providing...)
-int sampleStopALL();                      // stops all sample playback
+// sample functions (audioSample.c)
+int setSampleTable(char filenames[MAX_AUDIO_FILES][MAX_NAME],     // set the sample table mapping
+                   int sampleMap[MAX_SAMPLE]);  
+int sampleStart(int sampleID);                                    // starts a sample
+int sampleStop(int sampleID);                                     // stops a sample
+int sampleRestart(int sampleID);                                  // restarts a sample
+int sampleStartLoop(int sampleID);                                // starts a sample loop
+int sampleOverlay(int sampleID);                                  // plays a sample over itself (mix table limit providing...)
+int sampleStopALL();                                              // stops all sample playback
 
-// file open functions
+// audio file functions (audioFile.c)
 void printAudioFileInfo(int tableIdx);
 int addAudioFile(char* filename, AudioFile audioTable[], int i);
+
+// mixing functions (audioMix.c)
+bool initMixTable();
+int setMixTableFile(int audioFileIdx, Sample* sample);
+int mixBuffer(SAMPLE_TYPE buf[]);
 
 /*** INELEGANT WAY TO SET FILES FOR PLAYBACK... ***/
 int setPlaybackSound(int idx);            // sets an audio table indexed file for playback in mixer directly

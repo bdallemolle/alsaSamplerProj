@@ -6,6 +6,8 @@ pipath=pi@192.168.2.2:/home/pi
 
 src="audio.c 
 audioFile.c
+audioMix.c
+audioSample.c
 audio.h
 behavior.c
 behavior.h

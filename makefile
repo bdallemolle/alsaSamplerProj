@@ -4,13 +4,25 @@
 CC = gcc
 DEBUG = -DAUDIOINITDEBUG -DAUDIOPLAYDEBUG -DEVICEINITDEBUG
 FLAGS = -g -Wall -lasound -lpthread $(DEBUG)
-OBJ = audio.o audioFile.o behavior.o config.o control.o device.o event.o raspiGPIO.o
+AUDIO_OBJ = audioMix.o audioSample.o audioFile.o audio.o
+OBJ = $(AUDIO_OBJ) behavior.o config.o control.o device.o event.o raspiGPIO.o
 
-audio.o: audio.c audio.h
+
+# audio components
+
+audio.o: audio.c audio.h 
 	$(CC) $(FLAGS) -c audio.c 
 
 audioFile.o: audioFile.c audio.h 
-	$(CC) $(FLAGS) -c audioFile.c 
+	$(CC) $(FLAGS) -c audioFile.c
+
+audioMix.o: audioMix.c audio.h 
+	$(CC) $(FLAGS) -c audioMix.c  
+
+audioSample.o: audioSample.c audio.h 
+	$(CC) $(FLAGS) -c audioSample.c 
+
+# control components
 
 config.o: config.c config.h
 	$(CC) $(FLAGS) -c config.c
