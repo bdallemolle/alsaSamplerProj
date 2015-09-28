@@ -286,8 +286,7 @@ int mixBuffer(SAMPLE_TYPE buf[])
   int bufIdx = 0;
   bool lastSampleFrame = FALSE; 
   int i = 0;
-   
-  // LOCK MIX TABLE  
+    
   pthread_mutex_lock(&mix_lock); 
 
   // mix all available slots in mix table
@@ -318,7 +317,6 @@ int mixBuffer(SAMPLE_TYPE buf[])
     }
   }
 
-  // UNLOCK MIX TABLE
   pthread_mutex_unlock(&mix_lock);
 
   return 1; // success

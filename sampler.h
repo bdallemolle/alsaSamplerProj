@@ -12,8 +12,13 @@
 #define MAX_IO					24					  // max number of in/out ports on a device
 #define STDIN_FILENO			0					  // file descriptor of standard input
 
+// baseline supported control device drivers (in progress...)
+#define COMMANDLINE		0 					// a basic commandline interface for sampler	- NOT IMPLEMENTED!
+#define RASPI_GPIO		1					// raspi gpio device communication
+#define RASPI_SERIAL	2					// raspi serial communication abstraction		- NOT IMPLEMENTED!
+
 /*** temporary #defines for demo ***/
-#define OUTPUT_DEV 	    "sysdefault:CARD=CODEC" 	  // playback device name
+// #define OUTPUT_DEV 	    "sysdefault:CARD=CODEC" 	  // playback device name
 #define LIGHT			23
 int light_fd;
 /*** get rid of these eventually! ***/

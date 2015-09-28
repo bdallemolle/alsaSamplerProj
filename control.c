@@ -120,9 +120,8 @@ int run(CONFIG* c)
       // hacky way to do light status
       e.event[LIGHT](b.behavior[LIGHT](LIGHT, val));
     }
-    else {
-      if (GENERAL_DEBUG)
-        fprintf(stderr, " - POLL TIMEOUT...\n");
+    else if (GENERAL_DEBUG) {
+      fprintf(stderr, " - POLL TIMEOUT...\n");
     }
   }
 

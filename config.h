@@ -1,3 +1,5 @@
+// make this a single static object!!!
+
 // the configuration object
 typedef struct {
 	char audioOutputDevice[MAX_NAME];					// audio output device name

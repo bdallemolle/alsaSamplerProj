@@ -1,0 +1,4 @@
+CONTROL_DEV RaspiGPIO
+AUDIO_DEV sysdefault:CARD=CODEC
+AUDIO_FILE gtrsample.wav
+AUDIO_FILE snarehit1.wav

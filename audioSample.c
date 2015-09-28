@@ -31,7 +31,8 @@ void clearSampleTableEnt(int i)
 // -------------------------------------------------------------------------- //
 
 // clears/zero-outs an entry in the mix table
-void clearSampleTable() {
+void clearSampleTable() 
+{
   int i;
 
   if (AUDIO_INIT_DEBUG)

@@ -53,5 +53,5 @@ int initDevice(CONFIG* c) {
 	// set up sampler device!!!
 	// fprintf(stderr, "*** SHOULD SET UP SAMPLER LISTENING PORTS HERE! ***\n");
 
-	return;
+	return 1;
 }

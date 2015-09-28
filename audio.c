@@ -72,8 +72,6 @@ int initAudioTable()
   return 1; 
 }
 
-/*
-
 // -------------------------------------------------------------------------- //
 
 int initOutputDevice() 
@@ -178,8 +176,11 @@ void* playbackLaunch()
   pthread_exit(NULL);
 }
 
+// -------------------------------------------------------------------------- //
+
 // initializes audio player data structures and sound devices for playback
-int initAudio(CONFIG* c) {
+int initAudio(CONFIG* c) 
+{
   if (AUDIO_PLAY_DEBUG) 
     fprintf(stderr, " - Initializing audio!\n");
 
@@ -241,7 +242,7 @@ int startAudio() {
 
 // function to initiliaze audio file table (opens files)
 int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
-  int i;
+  int i, nValid;
 
   // check valid number of sample files
   if (nFiles > MAX_AUDIO_FILES) {
@@ -253,21 +254,27 @@ int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
     fprintf(stderr, "\n*** --------- OPENING AUDIO FILES --------- ***\n");
 
   // open all files
-  for (i = 0; i < nFiles; i++) {
-    addAudioFile(filenames[i], audioTable, i);        // change this to audio table + index
+  for (i = 0, nValid = 0; i < nFiles; i++) {
+    if (addAudioFile(filenames[i], audioTable, i) > 0)
+      nValid++;
     if (AUDIO_INIT_DEBUG)
       printAudioFileInfo(i);
   }
   
   // debugging
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, " - %d files opened\n", i);
+    fprintf(stderr, " - %d files opened\n", nValid);
+
+  if (nValid < nFiles) {
+    fprintf(stderr, "*** FATAL ERROR ***\n");
+    fprintf(stderr, " - Cannot open all audio files! Exiting...\n");
+    exit(1);
+  }
 
   // set extra audioTable file entries to blank
   if (i < MAX_AUDIO_FILES) {
-    if (AUDIO_INIT_DEBUG) {
+    if (AUDIO_INIT_DEBUG)
       fprintf(stderr, " - Zeroing out remaining entries\n");
-    }
     while (i < MAX_AUDIO_FILES) {
       clearAudioTableEnt(i);
       i++;
@@ -275,7 +282,7 @@ int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
   }  
 
   if (AUDIO_INIT_DEBUG) 
-    fprintf(stderr, "\n*** ------ DONE OPENING AUDIO FILES ------ ***\n");
+    fprintf(stderr, "\n*** ------ DONE OPENING AUDIO FILES ------ ***\n\n");
 
   return 1; 
 }                  

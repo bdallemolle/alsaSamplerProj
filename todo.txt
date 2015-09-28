@@ -1,0 +1,17 @@
+this is the official to-do list for the sampler proj
+
+CRITICAL TASKS
+
+ - config.c
+   audio file parsing
+   action parsing w/good debugging
+
+SHOULD DO ("CLEAN UP") TASKS
+
+ - config.c
+   disallow extra args (hold tight to config.txt syntax)
+   add support for blank lines while parsing
+   add support for comment ignoring while parsing
+
+LATER FEATURES
+

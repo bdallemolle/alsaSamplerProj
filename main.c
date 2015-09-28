@@ -7,6 +7,7 @@
 #include "audio.h"
 #include "behavior.h"
 #include "device.h"
+#include "event.h"
 #include "control.h"
 
 // entry point function

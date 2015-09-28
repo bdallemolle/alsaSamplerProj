@@ -41,6 +41,7 @@ int gpio_export(unsigned int gpio) {
 	}
  
 	len = snprintf(buf, sizeof(buf), "%d", gpio);
+
 	write(fd, buf, len);
 	close(fd);
  
@@ -64,6 +65,7 @@ int gpio_unexport(unsigned int gpio) {
 	len = snprintf(buf, sizeof(buf), "%d", gpio);
 	write(fd, buf, len);
 	close(fd);
+
 	return 0;
 }
 
@@ -72,10 +74,10 @@ int gpio_unexport(unsigned int gpio) {
  ****************************************************************/
 
 int gpio_set_dir(unsigned int gpio, unsigned int out_flag) {
-	int fd, len;
+	int fd;
 	char buf[MAX_BUF];
  
-	len = snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR  "/gpio%d/direction", gpio);
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR  "/gpio%d/direction", gpio);
  
 	fd = open(buf, O_WRONLY);
 	if (fd < 0) {
@@ -83,12 +85,10 @@ int gpio_set_dir(unsigned int gpio, unsigned int out_flag) {
 		return fd;
 	}
  
-	if (out_flag)
-		write(fd, "out", 4);
-	else
-		write(fd, "in", 3);
- 
+	if (out_flag) write(fd, "out", 4);
+	else write(fd, "in", 3);
 	close(fd);
+
 	return 0;
 }
 
@@ -97,10 +97,10 @@ int gpio_set_dir(unsigned int gpio, unsigned int out_flag) {
  ****************************************************************/
 
 int gpio_set_value(unsigned int gpio, unsigned int value) {
-	int fd, len;
+	int fd;
 	char buf[MAX_BUF];
  
-	len = snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
+    snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
  
 	fd = open(buf, O_WRONLY);
 	if (fd < 0) {
@@ -108,12 +108,10 @@ int gpio_set_value(unsigned int gpio, unsigned int value) {
 		return fd;
 	}
  
-	if (value)
-		write(fd, "1", 2);
-	else
-		write(fd, "0", 2);
- 
+	if (value) write(fd, "1", 2);
+	else write(fd, "0", 2);
 	close(fd);
+
 	return 0;
 }
 
@@ -121,12 +119,12 @@ int gpio_set_value(unsigned int gpio, unsigned int value) {
  * gpio_get_value												*
  ****************************************************************/
 
-int gpio_get_value(unsigned int gpio, unsigned int *value) {
-	int fd, len;
+int gpio_get_value(unsigned int gpio, int *value) {
+	int fd;
 	char buf[MAX_BUF];
 	char ch;
 
-	len = snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
  
 	fd = open(buf, O_RDONLY);
 	if (fd < 0) {
@@ -136,13 +134,10 @@ int gpio_get_value(unsigned int gpio, unsigned int *value) {
  
 	read(fd, &ch, 1);
 
-	if (ch != '0') {
-		*value = 1;
-	} else {
-		*value = 0;
-	}
- 
+	if (ch != '0') *value = 1;
+	else *value = 0;
 	close(fd);
+
 	return 0;
 }
 
@@ -152,10 +147,10 @@ int gpio_get_value(unsigned int gpio, unsigned int *value) {
  ****************************************************************/
 
 int gpio_set_edge(unsigned int gpio, char *edge) {
-	int fd, len;
+	int fd;
 	char buf[MAX_BUF];
 
-	len = snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/edge", gpio);
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/edge", gpio);
  
 	fd = open(buf, O_WRONLY);
 	if (fd < 0) {
@@ -173,10 +168,10 @@ int gpio_set_edge(unsigned int gpio, char *edge) {
  ****************************************************************/
 
 int gpio_fd_open(unsigned int gpio) {
-	int fd, len;
+	int fd;
 	char buf[MAX_BUF];
 
-	len = snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
+	snprintf(buf, sizeof(buf), SYSFS_GPIO_DIR "/gpio%d/value", gpio);
  
 	fd = open(buf, O_RDONLY | O_NONBLOCK);
 	if (fd < 0) {
@@ -357,9 +352,11 @@ int initRaspiGPIO(CONFIG* c) {
 			if ((controlDev.writePorts[i] = gpio_OPEN(c->writeMap[i], 1)) > 0) {
 				controlDev.numWritePorts++;
 				raspiWriteFdMap[j] = controlDev.writePorts[i];
+
 				/* GET RID OF THIS EVENTUALLY!!! */
 				light_fd = controlDev.writePorts[i];
 				/* GET RID OF THE ABOVE LINE ITS SO HACKY */
+
 				if (DEVICE_INIT_DEBUG)
 					fprintf(stderr, " * fd = %d\n", controlDev.writePorts[i]);
 			}

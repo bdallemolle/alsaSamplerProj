@@ -1,8 +1,3 @@
-// currently supported io device drivers (in progress...)
-#define COMMANDLINE		1 					// a basic commandline interface for sampler	- NOT IMPLEMENTED!
-#define RASPI_GPIO		2					// raspi gpio device communication
-#define RASPI_SERIAL	3					// raspi serial communication abstraction		- NOT IMPLEMENTED!
-
 // a control device structure
 typedef struct {
 	int id;										// device id

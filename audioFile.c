@@ -33,8 +33,8 @@ void printAudioFileInfo(int tableIdx) {
 
 // function to read WAV/RIFF file header
 int readWAV(AudioFile* a) {
-  char buf[WAV_OFFSET];		// buffer for header
-  int audioDataSize;  
+  char buf[WAV_OFFSET];		// buffer for header 
+  int audioDataSize = 0;
 
   // debugging
   if (AUDIO_INIT_DEBUG)
@@ -130,7 +130,6 @@ int readWAV(AudioFile* a) {
 
 int addAudioFile(char* filename, AudioFile audioTable[], int i) {
   struct stat fileStat;
-  int audioDataSize = 0;
 
   if (AUDIO_INIT_DEBUG) {
     fprintf(stderr, "*** Opening %s ***\n", filename);
@@ -160,8 +159,8 @@ int addAudioFile(char* filename, AudioFile audioTable[], int i) {
 
   // mmap file
   audioTable[i].addr = mmap(NULL, audioTable[i].fileSizeBytes,
-                PROT_READ, MAP_PRIVATE, 
-                audioTable[i].fd, 0);
+                            PROT_READ, MAP_PRIVATE, 
+                            audioTable[i].fd, 0);
   if (audioTable[i].addr == MAP_FAILED) {
     fprintf(stderr, "*** ERROR: mmapping %s failed ***\n", filename);
     // reset data in audio file entry
@@ -192,11 +191,6 @@ int addAudioFile(char* filename, AudioFile audioTable[], int i) {
     audioTable[i].fileSizeBytes = 0;     
     return -1;
   }
-
-  // store file info in data structure (should really be done in readWAV)
-  // audioTable[i]->audioSizeSamples = audioDataSize / (sizeof(SAMPLE_TYPE));  // size of audio data
-  // audioTable[i]->nChannels = NUM_CHAN;                                      // for now...hardcoded...
-  // audioTable[i]->bitDepth = BIT_DEPTH;                                      // for now...also hardcoded...
 
   return 1;
 }

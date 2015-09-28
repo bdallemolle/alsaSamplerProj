@@ -37,6 +37,8 @@ do
 done
 
 cp makefile alsaproj
+cp config.txt alsaproj
+cp todo.txt alsaproj
 
 # copy to pi
 

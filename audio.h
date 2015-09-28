@@ -4,13 +4,14 @@
 #define WAV_OFFSET      44                          // size (bytes) of .wav file header 
 
 /* EVENTUALLY OBSOLETE MACROS - USER PARAMS AND ALSA MIXING SHOULD TAKE CARE OF THIS */
-#define FRAME_SAMP      256                         // number of multi-channel samples
+#define FRAME_SAMP      512                         // number of multi-channel samples
 #define NUM_CHAN        2                           // number of channels of playback
 #define FRAME_SIZE      (FRAME_SAMP * NUM_CHAN)     // total size (in samples) of a playback frame
 #define SAMPLE_RATE     44100                       // 44.1k sample rate (default)
 #define BIT_DEPTH       16                          // playback bit depth
 #define POS_CLIP        32676                       // max value of 16-bit PCM  
-#define NEG_CLIP        -32768                      // min value of 16-bit PCM 
+#define NEG_CLIP        -32768                      // min value of 16-bit PCM
+
 typedef short SAMPLE_TYPE;                          // size of 16-bit PCM audio
 typedef short* SAMPLE_PTR;                          // pointer to 16-bit PCM audio data
 
@@ -22,10 +23,10 @@ pthread_mutex_t exit_lock;                    // exit (playback thread) toggle l
 typedef struct {
   int fd;			                        // file descriptor
   char filename[MAX_NAME];            // for debugging
-  char type[MAX_NAME];                // type of audio file (WAV/RIFF/etc...)
+  char type[MAX_NAME];                // type of audio file (WAV/RIFF/etc...) - ONLY .WAV AT THE MOMENT
   void* addr;			                    // pointer to audio file                     
   void* audioAddr;                    // pointer to start of data segment of file (for uncompressed PCM audio)
-  int nChannels;		                  // only stereo at the moment
+  int nChannels;		                  // ONLY STEREO (nChannels = 2) AT THE PRESENT
   int bitDepth;                       // bit depth
   int audioSizeSamples;		            // size of the audio data in sample slices
   int fileSizeBytes;                  // size of audio data in bytes
@@ -86,6 +87,7 @@ int sampleRestart(int sampleID);                                  // restarts a 
 int sampleStartLoop(int sampleID);                                // starts a sample loop
 int sampleOverlay(int sampleID);                                  // plays a sample over itself (mix table limit providing...)
 int sampleStopALL();                                              // stops all sample playback
+void clearSampleTable();                                          // clears all samples in table
 
 // audio file functions (audioFile.c)
 void printAudioFileInfo(int tableIdx);
@@ -95,6 +97,7 @@ int addAudioFile(char* filename, AudioFile audioTable[], int i);
 bool initMixTable();
 int setMixTableFile(int audioFileIdx, Sample* sample);
 int mixBuffer(SAMPLE_TYPE buf[]);
+void clearMixTable();
 
 /*** INELEGANT WAY TO SET FILES FOR PLAYBACK... ***/
 int setPlaybackSound(int idx);            // sets an audio table indexed file for playback in mixer directly
