@@ -21,8 +21,7 @@
 // -------------------------------------------------------------------------- //
 
 // a function to remove once their are virtual devices
-void hackyCommandLineParse(bool *isDone)
-{
+void hackyCommandLineParse(bool *isDone) {
   char buf[MAX_NAME];         // stdin input buffer
 
   fgets(buf, 80, stdin);
@@ -52,8 +51,8 @@ int setPollTable(struct pollfd fdset[], int* nfds)
   // zero out table
   memset((void*)fdset, 0, sizeof(fdset));
 
-  // set, by default, stdin to be fd.et[0] to fdset[0].fd = STDIN_FILENO;
-  fdset[0].fd = STDIN_FILENO;
+  // set, by default, stdin to be fd.et[0] to fdset[0].fd = STDIN_FD;
+  fdset[0].fd = STDIN_FD;
   fdset[0].events = POLLIN;
 
   // go through device and listen to all open fd's
@@ -71,25 +70,28 @@ int setPollTable(struct pollfd fdset[], int* nfds)
 
 int run(CONFIG* c) 
 {
-  struct pollfd fdset[MAX_IO+1];      // poll file descriptor set
-  int nfds = 0;                       // 
-  int timeout = POLL_TIMEOUT;         // poll timeout time                  
-  bool isDone = FALSE;                // boolean loop toggle
-  int retval = -1;                    // 
-  char val;                           //
-  int i = 0;                          // loop index variables
+  struct pollfd fdset[MAX_IO+1];	// poll file descriptor set
+  int nfds = 0;				// number of fd's to poll 
+  int timeout = POLL_TIMEOUT; 		// ...self explanitory                  
+  bool isDone = FALSE;			// loop toggle
+  int retval = -1;			// poll return value 
+  char val;				// single character for reading (should remove)
+  int i = 0;				// loop index variables
 
-	fprintf(stderr, "*** SAMPLER RUNNING! ***\n");
+  fprintf(stderr, "*** SAMPLER RUNNING! ***\n");
 
   // set file desciptor tables for polling
   setPollTable(fdset, &nfds);
 
   // a bad hack for avoiding initial overruns
+  // use a different sample writing protocol...
+  /*
   fprintf(stderr, "Waiting...\n");
   sleep(1);
   fprintf(stderr, "...\n");
   sleep(1);
   fprintf(stderr, "DONE!\n");
+  */
 
   // start audio thread!
   startAudio();

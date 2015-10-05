@@ -1,8 +1,11 @@
 # makefile for ALSA SAMPLER PROJECT
 # by Bryan Dalle Molle
+# 
+# NOTE TO SELF: this is getting long and unorderly...
+# 		better way to do this with less makefile lines?
 
 CC = gcc
-DEBUG = -DAUDIOINITDEBUG -DAUDIOPLAYDEBUG -DEVICEINITDEBUG
+DEBUG = -DAUDIOINITDEBUG -DAUDIOPLAYDEBUG -DEVICEINITDEBUG -DCONFIGDEBUG
 FLAGS = -g -Wall -lasound -lpthread $(DEBUG)
 AUDIO_OBJ = audioMix.o audioSample.o audioFile.o audio.o
 OBJ = $(AUDIO_OBJ) behavior.o config.o control.o device.o event.o raspiGPIO.o
@@ -46,7 +49,7 @@ main: main.c sampler.h $(OBJ)
 	$(CC) $(FLAGS) $(OBJ) main.c -o main 
 
 clean:
-	rm *.o main
+	rm -f *.o main
 
 all: main
 

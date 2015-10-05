@@ -15,13 +15,13 @@
 #include "audio.h"
 
 /* AUDIO DEVICE VARIABLES */
-char output_dev[MAX_NAME];                    // name of output device
+char output_dev[MAX_NAME];             // name of output device
 snd_pcm_t* output_handle = NULL;       // output device handle (ALSA)
-char input_dev[MAX_NAME];                     // name of input device
+char input_dev[MAX_NAME];              // name of input device
 snd_pcm_t* input_handle = NULL;        // input device handle (ALSA)
 
 /* CONCURRANT CONTROL VARIABLES */
-pthread_t PLAYBACK_THREAD = -1;               // playback thread id 
+pthread_t PLAYBACK_THREAD = -1;        // playback thread id 
 unsigned int EXIT_PLAYER = 0;          // playback loop exit toggle
 
 // -------------------------------------------------------------------------- //
@@ -74,19 +74,17 @@ int initAudioTable()
 
 // -------------------------------------------------------------------------- //
 
-int initOutputDevice() 
-{
+int initOutputDevice() {
   int err;
 
   // open ALSA output
-  if ((err = snd_pcm_open(&output_handle, output_dev, SND_PCM_STREAM_PLAYBACK, 0)) < 0) 
-  {
+  if ((err = snd_pcm_open(&output_handle, output_dev, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
     fprintf(stderr, "cannot open audio device %s (%s)\n", output_dev, snd_strerror(err));
     return -1;
   }
   
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "*** SOUND DEVICE '%s' OPEN ***\n", output_dev);
+    fprintf(stderr, "audio.c - SOUND DEVICE '%s' OPENED\n", output_dev);
 
   // set ALSA parameters
   if ((err = snd_pcm_set_params(output_handle,  // playback handle
@@ -96,8 +94,7 @@ int initOutputDevice()
              SAMPLE_RATE,                       // sampler rate
              1,                                 // soft resample (?)
              1000))                             // latency (500 microseconds)
-             < 0) 
-  {
+             < 0) {
     fprintf(stderr, "*** ERROR: set parameters error(%s)\n", snd_strerror(err));
     return -1;
   }
@@ -251,7 +248,7 @@ int setAudioTable(char filenames[MAX_AUDIO_FILES][MAX_NAME], int nFiles) {
   }
 
   if (AUDIO_INIT_DEBUG) 
-    fprintf(stderr, "\n*** --------- OPENING AUDIO FILES --------- ***\n");
+    fprintf(stderr, "\n*** --------- OPENING AUDIO FILES --------- ***\n\n");
 
   // open all files
   for (i = 0, nValid = 0; i < nFiles; i++) {
