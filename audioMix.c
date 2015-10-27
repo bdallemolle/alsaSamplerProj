@@ -80,7 +80,7 @@ int setMixTableFile(int audioFileIdx, Sample* sample)
     return -1;
   }
 
-  mixTable[openMixIdx].addr = (SAMPLE_PTR) audioTable[audioFileIdx].audioAddr;
+  mixTable[openMixIdx].addr = (SAMPLE_PTR)audioTable[audioFileIdx].audioAddr;
   mixTable[openMixIdx].file = &audioTable[audioFileIdx];
   mixTable[openMixIdx].nFrames = audioTable[audioFileIdx].audioSizeSamples / FRAME_SIZE;
   mixTable[openMixIdx].lastSampleIdx = audioTable[audioFileIdx].audioSizeSamples - 1;

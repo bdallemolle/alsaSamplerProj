@@ -83,16 +83,6 @@ int run(CONFIG* c)
   // set file desciptor tables for polling
   setPollTable(fdset, &nfds);
 
-  // a bad hack for avoiding initial overruns
-  // use a different sample writing protocol...
-  /*
-  fprintf(stderr, "Waiting...\n");
-  sleep(1);
-  fprintf(stderr, "...\n");
-  sleep(1);
-  fprintf(stderr, "DONE!\n");
-  */
-
   // start audio thread!
   startAudio();
 

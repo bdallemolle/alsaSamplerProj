@@ -59,11 +59,11 @@ int readWAV(AudioFile* a) {
 
   // output file size (minus 8 bytes?)
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "5-8: %d\n", *((int*)(buf+4)));       
+    fprintf(stderr, "5-8: %d\n", *((int*)(buf + 4)));       
 
   // output file header (should be WAVE)
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "9-12: %4.4s\n", (buf+8));
+    fprintf(stderr, "9-12: %4.4s\n", (buf + 8));
 
   // check for WAVE file                
   if (strncmp(buf+8, "WAVE", 4) == 0) {
@@ -77,14 +77,14 @@ int readWAV(AudioFile* a) {
 
   // "fmt"
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "13-16: %4.4s\n", (buf+12));             
+    fprintf(stderr, "13-16: %4.4s\n", (buf + 12));             
 
   // length of format data as listed above (bitdepth)
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "17-20: %d\n", *((int*)(buf+16)));        
+    fprintf(stderr, "17-20: %d\n", *((int*)(buf + 16)));        
 
   // check that it is 16 (later, or 24)
-  if (*((int*)(buf+16)) == BIT_DEPTH) {
+  if (*((int*)(buf + 16)) == BIT_DEPTH) {
     if (AUDIO_INIT_DEBUG)
       fprintf(stderr, " - Valid bit depth (16)\n");
     a->bitDepth = *((int*)(buf+16));
@@ -94,33 +94,31 @@ int readWAV(AudioFile* a) {
     return -1;
   }
 
-  // type of format 
+  // type of format - should be 1 for PCM
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "21-22: %d\n", *((short*)(buf+20)));      
-
-  // should be 1 (for PCM)?
+    fprintf(stderr, "21-22: %d\n", *((short*)(buf + 20)));      
 
   // number of channels
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "22-24: %d\n", *((short*)(buf+22))); 
+    fprintf(stderr, "22-24: %d\n", *((short*)(buf + 22))); 
 
   // check that it is 2! 
-  if (*((short*)(buf+22)) == NUM_CHAN) {
+  if (*((short*)(buf + 22)) == NUM_CHAN) {
     if (AUDIO_INIT_DEBUG)
       fprintf(stderr, " - Valid number of channels (2)\n");
-    a->nChannels = *((short*)(buf+22));
+    a->nChannels = *((short*)(buf + 22));
   }
   else {
     fprintf(stderr, "*** ERROR: INVALID NUM CHANNELS ***\n");
     return -1;
   }           
   
-  // size of audio data (minus 44 apparently too...)
+  // size of audio data (NOTE: minus 44 (header?) apparently...)
   if (AUDIO_INIT_DEBUG)
-    fprintf(stderr, "(AUDIO DATA SIZE?) 41-44: %d\n", *((int*)(buf+40)));
+    fprintf(stderr, "(AUDIO DATA SIZE) 41-44: %d\n", *((int*)(buf+40)));
 
-  // store audio file length
-  audioDataSize = *((int*)(buf+40)) - WAV_OFFSET;
+  // store audio file length. NOTE: subtracts header
+  audioDataSize = *((int*)(buf + 40)) - WAV_OFFSET;   
   a->audioSizeSamples = audioDataSize / (sizeof(SAMPLE_TYPE));  
 
   return 1;

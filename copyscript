@@ -2,7 +2,7 @@
 
 # set variables
 
-pipath=pi@192.168.2.2:/home/pi
+pipath=pi@169.254.0.2:/home/pi
 
 src="audio.c 
 audioFile.c

@@ -10,7 +10,7 @@
 #include "sampler.h"
 #include "config.h"
 
-#define MAX_LINE	200
+#define MAX_LINE 255
 
 // config file name
 static const char* configPath = "";	// this should be a cmdline param...
@@ -49,9 +49,10 @@ int matchTok(char* tok, const char* keyword) {
 // -------------------------------------------------------------------------- //
 
 /**
- * a temporary function which reads input from a buffer and prints useless
+ * utility function which reads input from a buffer and prints useless
  * arguments for debugging.
  */
+
 void ignoreExtraArgs(char buf[]) {
   char* pch = strtok(NULL, delim);
   while (pch != NULL) {
@@ -63,14 +64,15 @@ void ignoreExtraArgs(char buf[]) {
 // -------------------------------------------------------------------------- //
 
 /**
- * controlDevStringToId(char* str) 
+ * controlDevStringToId(char* str)
+ * 
  * given a character string, return the integer tag corresponding 
  * to the control device given by the string
  *
  * returns -1 if string does not match a valid control device.
  * otherwise, returns the integer tag corresponding to the control device
  *
- * TODO: should i move this to device.c?
+ * NOTE: should i move this to device.c?
  */
 
 int controlDevStringToId(char* str) {
@@ -86,10 +88,7 @@ int controlDevStringToId(char* str) {
 // -------------------------------------------------------------------------- //
 
 /**
- * parseDevices(CONFIG* c, FILE* f)
- *  - given the open config file pointer and the shared config object, 
- *    parse the audio and control input devices and populate the config 
- *    object accordingly
+ *
  * 
  */
 
@@ -131,11 +130,11 @@ void parseKeyword(CONFIG* c, FILE* f, char* buf, const char* kw,
  #  - keyword for arguement to parse?
  */
 void parseDevices(CONFIG* c, FILE* f) {
-  char buf[MAX_LINE];		// buffer for a line of the input file
-  char* pch = NULL;		// character point for iterating through buf
+  char buf[MAX_LINE];		 // buffer for a line of the input file
+  char* pch = NULL;		   // character point for iterating through buf
 
   // parse the control device
-  while (fgets(buf, MAX_LINE -1, f) != NULL) {
+  while (fgets(buf, MAX_LINE - 1, f) != NULL) {
     // find control device keyword
     pch = strtok(buf, delim);
     if (pch == NULL) 
@@ -300,7 +299,8 @@ void clearConfigObject(CONFIG* c) {
 /**
  * setDebugMessages()
  * - sets global debugging flags for different types of errors based on
- *   macros set from compilation. see makefile to filter debugging messages
+ *   macros set from compilation. debug settings are "baked" into executable 
+ *   see makefile to filter debugging messages
  */
 
 void setDebugMessages() {
@@ -310,6 +310,7 @@ void setDebugMessages() {
   DEVICE_INIT_DEBUG = 0;
   GENERAL_DEBUG = 0;
   CONFIG_DEBUG = 0;
+  AUDIO_DISABLED = 0;
 
   // set some debug flags
   #ifdef AUDIOINITDEBUG
@@ -331,6 +332,11 @@ void setDebugMessages() {
   #ifdef GENERALDEBUG
     GENERAL_DEBUG = 1;
   #endif
+
+  // audio disabled for debugging
+  #ifdef AUDIODISABLED
+    AUDIO_DISABLED = 1;
+  #endif
 }
 
 // -------------------------------------------------------------------------- //
@@ -345,21 +351,12 @@ void setDebugMessages() {
  */
 
 int config(CONFIG* c) {
-  // set debug flags from makefile
   setDebugMessages();
 
-  // set config object initial values!
-  clearConfigObject(c);
-
   // initialize the config structure by parsing the config file
-  parseConfigFile(c);
+  clearConfigObject(c);
+  parseConfigFile(c); 
 
-  // hardcode values into the configuration file, for now
-  // strcpy(c->audioOutputDevice, OUTPUT_DEV);		// set output device
-  // strcpy(c->audioFiles[0], "gtrsample.wav");		// set audio files...
-  // strcpy(c->audioFiles[1], "snarehit1.wav");		// ...
-  // c->numAudioFiles = 2;							// hardcoding number of audio files
-  // c->controlDevID = RASPI_GPIO;					// RASPI_GPIO number
   c->numReadPorts = 2;							// set number of read ports
   c->numWritePorts = 1;							// set number of read ports
 
@@ -376,19 +373,19 @@ int config(CONFIG* c) {
    */
 
    // configure button 1
-   c->sampleMap[0] = 0;							// set sample maps...
-   c->event[0] = 4;								// EVENT 1 
-   c->readMap[0] = 4;								// set raspi pin 4
+   c->sampleMap[0] = 0;							  // set sample maps...
+   c->event[0] = 4;								    // EVENT 1 
+   c->readMap[0] = 4;								  // set raspi pin 4
    c->behavior[0] = 2;								// BEHAVE 1 == DOWN PRESS BUTTON
 
    // configutre button 2
-   c->sampleMap[1] = 1;							// ... 
-   c->event[1] = 1;								// EVENT 2 
+   c->sampleMap[1] = 1;							  // ... 
+   c->event[1] = 1;								    // EVENT 2 
    c->readMap[1] = 17;								// set raspi pin 17
    c->behavior[1] = 1;								// BEHAVE 2 == UP PRESS BUTTON
 	
    // configure light
-   c->writeMap[0] = 22;							// set raspi pin 22
+   c->writeMap[0] = 22;							  // set raspi pin 22
 
    return 1;	// success!
 }

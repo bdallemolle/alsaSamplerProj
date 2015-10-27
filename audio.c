@@ -121,22 +121,25 @@ int playbackLoop()
   int isDone = 0;
   while (!isDone) 
   {
-    // zero buffer --- memset()
-    memset(buf, 0, FRAME_SIZE*sizeof(SAMPLE_TYPE));
+    // zero buffer
+    memset(buf, 0, FRAME_SIZE * sizeof(SAMPLE_TYPE));           
 
-    // mix buffer
-    mixBuffer(buf);            
+    if (!AUDIO_DISABLED) 
+    {
+      // mix buffer
+      mixBuffer(buf); 
 
-    // write frames to audio device
-    frames = snd_pcm_writei(output_handle, buf, FRAME_SAMP);
-    if (frames < 0) 
-    {
-      frames = snd_pcm_recover(output_handle, frames, 0);
-    }
-    if (frames < 0) 
-    {
-      fprintf(stderr, "*** ERROR: snd_pcm_write failed, exit playback loop... ***\n");
-      return -1;
+      // write frames to audio device
+      frames = snd_pcm_writei(output_handle, buf, FRAME_SAMP);
+      if (frames < 0) 
+      {
+        frames = snd_pcm_recover(output_handle, frames, 0);
+      }
+      if (frames < 0) 
+      {
+        fprintf(stderr, "*** ERROR: snd_pcm_write failed, exit playback loop... ***\n");
+        return -1;
+      }
     }
 
     // check exit conditions
