@@ -2,5 +2,9 @@
 CONTROL_DEV RaspiGPIO
 	 
 AUDIO_DEV sysdefault:CARD=CODEC
+
 AUDIO_FILE gtrsample.wav
 AUDIO_FILE snarehit1.wav
+
+SAMPLE sample1 gtrsample.wav
+SAMPLE sample2 snarehit1.wav

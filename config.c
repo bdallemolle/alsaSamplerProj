@@ -10,7 +10,14 @@
 #include "sampler.h"
 #include "config.h"
 
-#define MAX_LINE 255
+#define MAX_LINE    255
+#define MAX_BUF     80
+
+// sample tag for sample -> audio file translation
+typedef struct {
+  char tag[MAX_BUF];
+  char audio[MAX_BUF];
+} SAMPLE_TAG;
 
 // config file name
 static const char* configPath = "";	// this should be a cmdline param...
@@ -21,11 +28,16 @@ static const char* delim = " \t\n";
 static const char* controlDevKey = "CONTROL_DEV";
 static const char* audioDevKey = "AUDIO_DEV";
 static const char* audioFileKey = "AUDIO_FILE";
+static const char* sampleKey = "SAMPLE";
 static const char* actionKey = "ACTION";
 static const char* inPortKey = "IN";
 static const char* behaviorKey = "BEHAVE";
 static const char* eventKey = "EVENT";
 static const char* outPortKey = "OUT";
+
+// action tag data
+static int sampleTagIdx = 0;
+static SAMPLE_TAG sampleTagTable[MAX_SAMPLE];
 
 // -------------------------------------------------------------------------- //
 
@@ -37,13 +49,20 @@ static const char* outPortKey = "OUT";
  */
 int matchTok(char* tok, const char* keyword) {
   if (tok == NULL) {
-    fprintf(stderr, "matchTok() - null token\n");
+    if (CONFIG_DEBUG)
+      fprintf(stderr, "matchTok() - null token\n");
     return -1;
   }
   else if (strcmp(tok, keyword) != 0) {
-    fprintf(stderr, "matchTok() - %s != %s\n", tok, keyword);
+    if (CONFIG_DEBUG)
+      fprintf(stderr, "matchTok() - %s != %s\n", tok, keyword);
     return 0;
-  } else return 1;
+  } 
+  else {
+    if (CONFIG_DEBUG)
+      fprintf(stderr, "matchTok() - %s = %s\n", tok, keyword);
+    return 1;
+  }
 }
 
 // -------------------------------------------------------------------------- //
@@ -88,6 +107,36 @@ int controlDevStringToId(char* str) {
 // -------------------------------------------------------------------------- //
 
 /**
+ * lookUpActionTag(char* buf)
+ *  - given a character string, return the index of an action tag
+ *  - returns the index of the action tag, or -1 if not found
+ */
+
+int lookUpAudioFile(char* buf, CONFIG* c) {
+  for (int i = 0; i < MAX_AUDIO_FILES; ++i)
+    if (strcmp(buf, c->audioFiles[i]) == 0)
+      return i;
+  return -1;
+}
+
+// -------------------------------------------------------------------------- //
+
+/**
+ * lookUpSampleTag(char* buf)
+ *  - given a character string, return the index of an sample tag
+ *  - returns the index of the sample tag, or -1 if not found
+ */
+
+int lookUpSampleTag(char* buf) {
+  for (int i = 0; i < MAX_SAMPLE; ++i)
+    if (strcmp(buf, sampleTagTable[i].tag) == 0)
+      return i;
+  return -1;
+}
+
+// -------------------------------------------------------------------------- //
+
+/**
  *
  * 
  */
@@ -124,10 +173,6 @@ void parseKeyword(CONFIG* c, FILE* f, char* buf, const char* kw,
  *  - given the open config file pointer and the shared config object, 
  *    parse the audio and control input devices and populate the config 
  *    object accordingly
- * 
- * TODO: if possible, make this generic
- *  - add additional arguement for parse arguments that handles arg parsing
- #  - keyword for arguement to parse?
  */
 void parseDevices(CONFIG* c, FILE* f) {
   char buf[MAX_LINE];		 // buffer for a line of the input file
@@ -165,7 +210,7 @@ void parseDevices(CONFIG* c, FILE* f) {
   }
 
   // parse the audio device
-  while (fgets(buf, MAX_LINE -1, f) != NULL) {
+  while (fgets(buf, MAX_LINE - 1, f) != NULL) {
     // find audio device keyword
     pch = strtok(buf, delim);
     if (pch == NULL) 
@@ -195,7 +240,7 @@ void parseDevices(CONFIG* c, FILE* f) {
     }
   }
 
-   // check for empty input (end of file)
+  // check for empty input (end of file)
   if (buf == NULL) {
     fprintf(stderr, "*** FATAL ERROR ***\n");
     fprintf(stderr, " - failed to read required data in config.txt\n"); 
@@ -205,48 +250,85 @@ void parseDevices(CONFIG* c, FILE* f) {
 
 // -------------------------------------------------------------------------- //
 
-void parseAudioFiles(CONFIG* c, FILE* f) {
-  char buf[MAX_LINE];
+void parseAudioFile(CONFIG* c, FILE* f) {
   char* pch = NULL;
-  int nFiles = 0;
 
-  while (1) {
-    // parse the control device
-    if (fgets(buf, MAX_LINE - 1, f) == NULL) {
-      fprintf(stderr, "*** FATAL ERROR *** \n");
-      fprintf(stderr, " - nothing after audio files! - eventually this will exit\n");
-      // exit(1);
-      break;
-    }
-
-    pch = strtok(buf, delim);
-    if (!matchTok(pch, audioFileKey)) {
-      fprintf(stderr, "config.c - done reading audio files\n");
-      break;
-    }
-
-    pch = strtok(NULL, delim);
-    if (pch == NULL) {
-      fprintf(stderr, "*** FATAL ERROR - failed to parse audio file!\n");
-      exit(1);
-    }
-
-    // debugging
-    fprintf(stderr, "config.c - audio file %s registered\n", pch);
-
-    // set audio device
-    strcpy(c->audioFiles[nFiles], pch);		
-    ignoreExtraArgs(buf);
-    nFiles++; 
+  pch = strtok(NULL, delim);
+  if (pch == NULL) {
+    fprintf(stderr, "*** FATAL ERROR ***\n");
+    fprintf(stderr, " - no audio file name provided!\n");
+    exit(1);
   }
 
-  c->numAudioFiles = nFiles;
+  // debugging
+  if (CONFIG_DEBUG)
+    fprintf(stderr, "config.c - audio file %s registered\n", pch);
+
+  if (lookUpAudioFile(pch, c) < 0) {
+    // set audio device
+    strcpy(c->audioFiles[c->numAudioFiles], pch);	
+    c->numAudioFiles++;	
+  }
+  else {
+    fprintf(stderr, "config.c - WARNING: ignoring duplicate audio file\n");
+  }
 }
 
 // -------------------------------------------------------------------------- //
 
-void parseConfigFile(CONFIG* c) {
-  FILE* f = fopen(configFile, "r");
+void parseSample(CONFIG *c, FILE *f) {
+  char *pch = NULL;
+  int audioIdx = 0;
+
+  pch = strtok(NULL, delim);
+  if (pch == NULL) {
+    fprintf(stderr, "*** FATAL ERROR *** \n");
+    fprintf(stderr, " - config syntax: no sample tag provided!\n");
+    exit(1);
+  }
+
+  // add sample tag
+  if (sampleTagIdx == MAX_SAMPLE) {
+    fprintf(stderr, "*** FATAL ERROR ***\n");
+    fprintf(stderr, " - config syntax: too many samples!\n");
+    exit(1);
+  }
+  else if (lookUpSampleTag(pch) < 0) {
+    strcpy(&sampleTagTable[sampleTagIdx].tag[0], pch);
+  }
+  else {
+    fprintf(stderr, "*** FATAL ERROR ***\n");
+    fprintf(stderr, " - config syntax: duplicate sample tag!\n");
+    exit(1);
+  }
+
+  // grab the audio file
+  pch = strtok(NULL, delim);
+  if (pch == NULL) {
+    fprintf(stderr, "*** FATAL ERROR *** \n");
+    fprintf(stderr, " - config syntax: no audio file provided for sample!\n");
+    exit(1);
+  }
+
+  // verify audio file exists
+  if ((audioIdx = lookUpAudioFile(pch, c)) > 0) {
+    strcpy(&sampleTagTable[sampleTagIdx].audio[0], pch);
+  }
+  else {
+    fprintf(stderr, "*** FATAL ERROR ***\n");
+    fprintf(stderr, " - config syntax: sample's audio file does not exist!\n");
+    exit(1);
+  }
+
+  sampleTagIdx++;
+}
+
+// -------------------------------------------------------------------------- //
+
+void parseConfigFile(CONFIG *c) {
+  FILE *f = fopen(configFile, "r");
+  char buf[MAX_LINE];
+  char *pch = NULL;
 
   if (f == NULL) {
     fprintf(stderr, "*** FATAL ERROR *** \n"); 
@@ -254,9 +336,65 @@ void parseConfigFile(CONFIG* c) {
     exit(1);
   }
 
+  // global definitions, must be initialized in order
   parseDevices(c, f);
-  parseAudioFiles(c, f);
-  // parse actions ... this is gonna be fun ...
+
+  // parse AUDIO FILES
+  while (c->numAudioFiles < MAX_AUDIO_FILES) {
+    // grab an audio file
+    if (fgets(buf, MAX_LINE - 1, f) == NULL) {
+      fprintf(stderr, "*** DONE PARSING *** \n");
+      return;
+    }
+
+    // check for AUDIO FILE keyword
+    pch = strtok(buf, delim);
+    if (matchTok(pch, audioFileKey) > 0) {
+      if (CONFIG_DEBUG) {
+        fprintf(stderr, "config.c - parsing audio file\n");
+        fprintf(stderr, "config.c - buf reads %s\n", buf);
+      }
+      parseAudioFile(c, f);
+      ignoreExtraArgs(buf);
+    }
+    else {
+      if (CONFIG_DEBUG)
+        fprintf(stderr, "config.c - done parsing audio file\n");
+      break;
+    }
+  }
+
+  // NOTE: HERE WE WOULD PARSE SETTINGS IN A LOOP
+
+  // NOTE: this should be cleared per setting!
+  // this way, action tags have 'setting scope'
+  for (int i = 0; i < MAX_SAMPLE; ++i) {
+    sampleTagTable[i].tag[0] = '\0';
+    sampleTagTable[i].audio[0] = '\0';
+  }
+
+  // parse SAMPLES
+  while (sampleTagIdx < MAX_SAMPLE) {
+    // grab an SAMPLE
+    if (fgets(buf, MAX_LINE - 1, f) == NULL) {
+      fprintf(stderr, "*** DONE PARSING *** \n");
+      return;
+    }
+
+    // check for SAMPLE keyword
+    pch = strtok(buf, delim);
+    if (matchTok(pch, sampleKey) > 0) {
+      if (CONFIG_DEBUG)
+        fprintf(stderr, "config.c - parsing sample\n");
+      parseSample(c, f);
+      ignoreExtraArgs(buf);
+    }
+    else {
+      if (CONFIG_DEBUG)
+        fprintf(stderr, "config.c - done parsing samples\n");
+      break;
+    }
+  }
 
   fclose(f);
 }

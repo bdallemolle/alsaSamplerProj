@@ -6,7 +6,7 @@
 
 CC = gcc
 DEBUG = -DAUDIOINITDEBUG -DAUDIOPLAYDEBUG -DEVICEINITDEBUG -DCONFIGDEBUG -DAUDIODISABLED
-FLAGS = -g -Wall -lasound -lpthread $(DEBUG)
+FLAGS = -std=gnu99 -g -Wall -lasound -lpthread $(DEBUG)
 AUDIO_OBJ = audioMix.o audioSample.o audioFile.o audio.o
 OBJ = $(AUDIO_OBJ) behavior.o config.o control.o device.o event.o raspiGPIO.o
 
