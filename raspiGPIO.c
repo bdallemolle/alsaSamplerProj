@@ -247,12 +247,15 @@ int gpio_SETVAL(unsigned int gpio_fd, int val) {
  ****************************************************************/
 
 void readRaspiGPIO(int fd, char* val) {
-	int i = 0;
 	int gpio = -1;
+	int len = 0;
+	char buf[80];
 
-	for (i = 0; i < NUM_RASPI_GPIO; i++)
-		if (fd == raspiReadFdMap[i])
-			gpio = raspiPinMap[i];
+	/*
+	// find mapping and translate fd into raspi pin number
+	for (int i = 0; i < NUM_RASPI_GPIO; i++)
+	  if (fd == raspiReadFdMap[i])
+		gpio = raspiPinMap[i];
 
 	if (gpio == -1) {
 		fprintf(stderr, "*** ERROR TRANSLATING FD %d ***\n", fd);
@@ -262,6 +265,27 @@ void readRaspiGPIO(int fd, char* val) {
 	
 	// set read value
 	*val = (char)gpio_GETVAL(gpio);
+	*/
+
+	read(fd, val, 1);
+
+	fprintf(stderr, "RASPI READ VAL %d\n", *val);
+
+	if (*val != '0') *val = 1;
+	else *val = 0;
+
+	/*
+	// check for the nothing-to-read case
+	len = read(fd, buf, 80);
+	if (len == 0) {
+	  fprintf(stderr, "readRaspiGPIO() - no data to read at gpio port\n");
+	  // *val = 0;
+	  // return;
+	}
+	else { 
+	  fprintf(stderr, "readRaspiGPIO() - there is data to read at the GPIO port\n");
+    }
+    */
 
 	return;
 }

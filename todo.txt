@@ -3,15 +3,25 @@ this is the official to-do list for the sampler proj
 CRITICAL TASKS
 
  - config.c
-   audio file parsing
-   action parsing w/good debugging
+   : audio file parsing - DONE
+   : action parsing - IN PROGRESS
+   : change button behaviors to be purely on state called
+   : modify RaspiRead function to ignore reading value from pin
+     -- though, make new RaspiRead that will keep value (RaspiState vs RaspiRead)
+   : configure action via config file
 
 SHOULD DO ("CLEAN UP") TASKS
 
  - config.c
    disallow extra args (hold tight to config.txt syntax)
-   add support for blank lines while parsing
+   add support for blank lines while parsing - DONE
    add support for comment ignoring while parsing
+   add setting parsing
 
 LATER FEATURES
+
+ - USE WIRINGPI FOR MORE RASPI CONTROL OPTIONS!
+   installed on RASPI
+   NOTE: need to use -lwiringPi and -lwiringPiDev for
+   
 

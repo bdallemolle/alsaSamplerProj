@@ -20,7 +20,7 @@ typedef struct {
 } SAMPLE_TAG;
 
 // config file name
-static const char* configPath = "";	// this should be a cmdline param...
+static const char* configPath = "";	              // TODO: commandline parameter
 static const char* configFile = "config.txt";		
 static const char* delim = " \t\n";
 
@@ -137,56 +137,27 @@ int lookUpSampleTag(char* buf) {
 // -------------------------------------------------------------------------- //
 
 /**
- *
- * 
- */
-
-/* 		FUTURE IMPLEMENTATION STARTED HERE!  
-void parseKeyword(CONFIG* c, FILE* f, char* buf, const char* kw, 
-                 (void*) paf (void, void, void, void), bool getNewLine) {
-  char* pch = NULL;		// character point for iterating through buf
-
-  // parse the control device
-  while (getline(buf, f, getNewLine) != NULL) {		// MAKE THIS FUNCTION
-    // get keyword
-    pch = strtok(buf, delim);
-    if (pch == NULL) {  
-      getNewLine = FALSE; 
-      continue;
-    }
-    else if (!matchTok(pch, kw)) {
-      fprintf(stderr, "*** FATAL ERROR ***\n");
-      fprintf(stderr, " - failed to parse expected %s keyword!\n", kw);
-      exit(1);
-    }
-    
-    // parse arguments using specific parse argument function (paf)
-    if (paf(c, f, buf, pch)) break;
-  }
-}
-*/
-
-// -------------------------------------------------------------------------- //
-
-/**
  * parseDevices(CONFIG* c, FILE* f)
  *  - given the open config file pointer and the shared config object, 
  *    parse the audio and control input devices and populate the config 
  *    object accordingly
+ *  - program cannot proceed without successfully parsing a control
+ *    device and an audio device!
  */
+
 void parseDevices(CONFIG* c, FILE* f) {
-  char buf[MAX_LINE];		 // buffer for a line of the input file
-  char* pch = NULL;		   // character point for iterating through buf
+  char buf[MAX_LINE];		       // buffer for a line of the input file
+  char* pch = NULL;		         // character point for iterating through buf
 
   // parse the control device
   while (fgets(buf, MAX_LINE - 1, f) != NULL) {
-    // find control device keyword
+    // find CONTROL_DEV keyword
     pch = strtok(buf, delim);
     if (pch == NULL) 
       continue;
-    else if (!matchTok(pch, controlDevKey)) {
+    else if (matchTok(pch, controlDevKey) <= 0) {
       fprintf(stderr, "*** FATAL ERROR ***\n");
-      fprintf(stderr, " - failed to parse control device!\n");
+      fprintf(stderr, " - failed to parse required %s keyword!\n", controlDevKey);
       exit(1);
     }
 
@@ -215,7 +186,7 @@ void parseDevices(CONFIG* c, FILE* f) {
     pch = strtok(buf, delim);
     if (pch == NULL) 
       continue;
-    else if (!matchTok(pch, audioDevKey)) {
+    else if (matchTok(pch, audioDevKey) <= 0) {
       fprintf(stderr, "*** FATAL ERROR ***\n");
       fprintf(stderr, " - parser failed to parse %s keyword\n", audioDevKey);
       exit(1);
@@ -329,6 +300,7 @@ void parseConfigFile(CONFIG *c) {
   FILE *f = fopen(configFile, "r");
   char buf[MAX_LINE];
   char *pch = NULL;
+  int ret = 0;   
 
   if (f == NULL) {
     fprintf(stderr, "*** FATAL ERROR *** \n"); 
@@ -343,23 +315,23 @@ void parseConfigFile(CONFIG *c) {
   while (c->numAudioFiles < MAX_AUDIO_FILES) {
     // grab an audio file
     if (fgets(buf, MAX_LINE - 1, f) == NULL) {
-      fprintf(stderr, "*** DONE PARSING *** \n");
-      return;
+      if (CONFIG_DEBUG)
+        fprintf(stderr, "*** DONE PARSING *** \n");
+      break;
     }
 
     // check for AUDIO FILE keyword
     pch = strtok(buf, delim);
-    if (matchTok(pch, audioFileKey) > 0) {
-      if (CONFIG_DEBUG) {
+    if ((ret = matchTok(pch, audioFileKey)) > 0) {
+      if (CONFIG_DEBUG)
         fprintf(stderr, "config.c - parsing audio file\n");
-        fprintf(stderr, "config.c - buf reads %s\n", buf);
-      }
       parseAudioFile(c, f);
       ignoreExtraArgs(buf);
     }
-    else {
+    else if (ret == 0) {
+      // no AUDIO_FILE keyword, done with audio file section
       if (CONFIG_DEBUG)
-        fprintf(stderr, "config.c - done parsing audio file\n");
+        fprintf(stderr, "config.c - done parsing audio files\n");
       break;
     }
   }
@@ -378,18 +350,18 @@ void parseConfigFile(CONFIG *c) {
     // grab an SAMPLE
     if (fgets(buf, MAX_LINE - 1, f) == NULL) {
       fprintf(stderr, "*** DONE PARSING *** \n");
-      return;
+      break;
     }
 
     // check for SAMPLE keyword
     pch = strtok(buf, delim);
-    if (matchTok(pch, sampleKey) > 0) {
+    if ((ret = matchTok(pch, sampleKey)) > 0) {
       if (CONFIG_DEBUG)
         fprintf(stderr, "config.c - parsing sample\n");
       parseSample(c, f);
       ignoreExtraArgs(buf);
     }
-    else {
+    else if (ret == 0) {
       if (CONFIG_DEBUG)
         fprintf(stderr, "config.c - done parsing samples\n");
       break;
@@ -453,27 +425,33 @@ void setDebugMessages() {
   // set some debug flags
   #ifdef AUDIOINITDEBUG
     AUDIO_INIT_DEBUG = 1;
+    fprintf(stderr, " config.c - AUDIO INIT DEBUGGING\n");
   #endif
 
   #ifdef AUDIOPLAYDEBUG
     AUDIO_PLAY_DEBUG = 1;
+    fprintf(stderr, " config.c - AUDIO PLAY DEBUGGING\n");
   #endif
 
   #ifdef DEVICEINITDEBUG
     DEVICE_INIT_DEBUG = 1;
+    fprintf(stderr, " config.c - DEVICE INIT DEBUGGING\n");
   #endif
 
   #ifdef CONFIGDEBUG
     CONFIG_DEBUG = 1;
+    fprintf(stderr, " config.c - CONFIG DEBUGGING\n");
   #endif
 
   #ifdef GENERALDEBUG
     GENERAL_DEBUG = 1;
+    fprintf(stderr, " config.c - GENERAL DEBUGGING\n");
   #endif
 
   // audio disabled for debugging
   #ifdef AUDIODISABLED
     AUDIO_DISABLED = 1;
+    fprintf(stderr, " config.c - AUDIO DISABLED\n");
   #endif
 }
 

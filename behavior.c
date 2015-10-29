@@ -18,7 +18,7 @@ void clearBehaviors() {
 	b.numBehaviors = 0;							
 	for (i = 0; i < MAX_IO; i++) {
 		b.behavior[i] = NULL;
-		previousButtonVal[i] = 1;
+		previousButtonVal[i] = 0;
 		previousButtonState[i] = 0;
 	}
 	return;
@@ -28,37 +28,75 @@ void clearBehaviors() {
 
 // behavior functions
 int downPressButton(int i, int val) {
-	if (val != previousButtonVal[i]) {
-		previousButtonVal[i] = val;
-		previousButtonState[i]++;
-		if (previousButtonState[i] == 1) {
-			fprintf(stderr, "*** REGISTER DOWN PRESS FOR INPUT %d ***\n", i);
-			return 1;
-		}
-		else if (previousButtonState[i] == 2) {
-			previousButtonState[i] = 0;
-		}
+  // if (GENERAL_DEBUG) {
+    fprintf(stderr, " behavior.c - down button press called!\n");
+    fprintf(stderr, " behavior.c - IGNORING value of fd %d is %d!\n", i, val);
+  // }
+
+  /*
+  previousButtonState[i]++;
+  if (previousButtonState[i] == 1) {
+  	// if (GENERAL_DEBUG) {
+	fprintf(stderr, "*** REGISTER DOWN PRESS FOR INPUT %d ***\n", i);
+	// }
+	return 1;
+  }
+  else if (previousButtonState[i] == 2) {
+	previousButtonState[i] = 0;
+  }	
+  */
+
+  if (val != previousButtonVal[i]) {
+    previousButtonVal[i] = val;
+	previousButtonState[i]++;
+	  if (previousButtonState[i] == 1) {
+		fprintf(stderr, "*** REGISTER DOWN PRESS FOR INPUT %d ***\n", i);
+		return 1;
+	  }
+	else if (previousButtonState[i] == 2) {
+	  previousButtonState[i] = 0;
 	}
-	return 0;
+  }
+  return 0;
+
 }
 
 /* -------------------------------------------------------------------------- */
 
 int upPressButton(int i, int val) {
-	if (val != previousButtonVal[i]) {
-		previousButtonVal[i] = val;
-		previousButtonState[i]++;
-		if (previousButtonState[i] == 2) {
-			fprintf(stderr, "*** REGISTER UP PRESS FOR INPUT %d ***\n", i);
-			previousButtonState[i] = 0;
-			return 1;
-		}
+  // if (GENERAL_DEBUG) {
+    fprintf(stderr, " behavior.c - up button press called!\n");
+	fprintf(stderr, " behavior.c - IGNORING value of fd %d is %d!\n", i, val);
+  // }
+
+  /*
+  previousButtonState[i]++;
+  if (previousButtonState[i] == 2) {
+	fprintf(stderr, "*** REGISTER UP PRESS FOR INPUT %d ***\n", i);
+	previousButtonState[i] = 0;
+	return 1;
+  }
+  else {
+    return 0;
+  }
+  */
+
+  if (val != previousButtonVal[i]) {
+    previousButtonVal[i] = val;
+	previousButtonState[i]++;
+    if (previousButtonState[i] == 2) {
+	  fprintf(stderr, "*** REGISTER UP PRESS FOR INPUT %d ***\n", i);
+	  previousButtonState[i] = 0;
+	  return 1;
 	}
-	return 0;
+  }
+  return 0;
+
 }
 
 /* -------------------------------------------------------------------------- */
 
+// sets a light whenever ANY audio is playing
 int lightDemo(int j, int val) {
 	int i = 0;
 	// fprintf(stderr, "*** LIGHT DEMO CALLED ***\n");
